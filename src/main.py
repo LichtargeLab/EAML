@@ -17,6 +17,7 @@ Example:
 TODO:
     * convert process_vcf to multiprocessing
     * parse Weka result output
+    * figure out random seed setting
 """
 # Import env information
 import os
@@ -30,6 +31,7 @@ from SupportClasses import DesignMatrix
 from dotenv import load_dotenv
 import weka.core.converters as converters
 import weka.core.jvm as jvm
+from weka.core.classes import Random
 from weka.classifiers import Classifier
 from weka.experiments import SimpleCrossValidationExperiment
 load_dotenv()
@@ -145,11 +147,12 @@ class Pipeline(object):
             utils.write_arff(split, ft_labels, self.arff_dir / (gene + '.arff'))
 
     def run_weka(self, n_runs=1):
+        jvm.start()
+        Random(42)
         datasets = [str(arff) for arff in self.arff_dir.glob('*.arff')]
         classifiers = [Classifier(classname=clf, options=opts) for
                        clf, opts in self.classifiers.items()]
         result = str(self.resultsdir / 'full_results-cv.arff')
-        jvm.start()
         exp = SimpleCrossValidationExperiment(
             classification=True,
             runs=n_runs,
@@ -162,6 +165,11 @@ class Pipeline(object):
         exp.run()
         loader = converters.loader_for_file(result)
         cv_results = loader.load_file(result)
+        mcc_idx = cv_results.attribute_by_name('Matthews_correlation').index
+        run_idx = cv_results.attribute_by_name('Key_Run').index
+        fold_idx = cv_results.attribute_by_name('Key_Fold').index
+        for n in range(1, n_runs + 1):
+            gene_result_d = defaultdict(lambda: defaultdict(list))
         jvm.stop()
 
 

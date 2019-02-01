@@ -59,7 +59,8 @@ def update_matrix(matrix, sample_gene_d):
 def write_arff(matrix, ft_labels, output):
     attrs = []
     examples = []
-    attrs.append(['@relation {}'.format(str(output).split('/')[-1].split('.')[0])])
+    attrs.append(['@relation '
+                  '{}'.format(str(output).split('/')[-1].split('.')[0])])
     for ft in ft_labels:
         attrs.append(['@attribute {} REAL'.format(ft)])
     attrs.append(['@data'])
