@@ -7,6 +7,7 @@ Created on 2019-01-28
 @author: dillonshapiro
 """
 import re
+import csv
 
 
 def refactor_EA(EA):
@@ -14,7 +15,7 @@ def refactor_EA(EA):
     for score in EA:
         try:
             score = float(score)
-        except ValueError:
+        except (ValueError, TypeError):
             if score in ['STOP', 'fs-indel', 'no_STOP']:
                 score = 100
         newEA.append(score)
@@ -54,5 +55,20 @@ def update_matrix(matrix, sample_gene_d):
                         matrix.update(neg_pAFF(var.EA, var.zygo),
                                       '_'.join([gene, hyp]), sample)
 
-def write_arff(self, output):
-    pass
+
+def write_arff(matrix, ft_labels, output):
+    attrs = []
+    examples = []
+    attrs.append(['@relation {}'.format(str(output).split('/')[-1].split('.')[0])])
+    for ft in ft_labels:
+        attrs.append(['@attribute {} REAL'.format(ft)])
+    attrs.append(['@data'])
+    for i, row in matrix.X:
+        example = [str(x) for x in row]
+        example.append(str(matrix.y[i]))
+        examples.append(example)
+    attrs.append(['@attribute class {0,1}'])
+    with open(output, 'w') as f:
+        writer = csv.writer(f, lineterminator='\n')
+        rows = attrs + examples
+        writer.writerows(rows)

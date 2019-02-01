@@ -14,8 +14,8 @@ import numpy as np
 
 class DesignMatrix(object):
     def __init__(self, matrix, feature_labels, id_labels):
-        self.X = matrix[:, :-1]
-        self.y = matrix[:, -1]
+        self.X = matrix[:, :-1].copy()
+        self.y = matrix[:, -1].copy()
         self._ft_map = OrderedDict((feature, i) for i, feature in
                                    enumerate(feature_labels))
         self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
@@ -29,6 +29,15 @@ class DesignMatrix(object):
             self.X[id_idx, ft_idx] += val
         else:
             raise TypeError('Invalid feature type used.')
+
+    def get_gene(self, gene, hyps=None):
+        if hyps:
+            col_names = ['_'.join([gene, hyp]) for hyp in hyps]
+            col_idxs = [self._ft_map[ft] for ft in col_names]
+            return self.X[:, col_idxs]
+        else:
+            idx = self._ft_map[gene]
+            return self.X[:, idx]
 
 
 class ConfusionMatrix(object):
