@@ -8,6 +8,7 @@ Created on 2019-01-28
 """
 import re
 import csv
+import pandas as pd
 
 
 def refactor_EA(EA):

@@ -16,22 +16,21 @@ Example:
 
 TODO:
     * convert process_vcf to multiprocessing
-    * parse Weka result output
     * figure out random seed setting
+    * convert Weka method to incorporate multi-run experiments
 """
 # Import env information
 import os
 import utils
 import pandas as pd
 import numpy as np
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, OrderedDict
 from pathlib import Path
 from pysam import VariantFile
 from SupportClasses import DesignMatrix
 from dotenv import load_dotenv
 import weka.core.converters as converters
 import weka.core.jvm as jvm
-from weka.core.classes import Random
 from weka.classifiers import Classifier
 from weka.experiments import SimpleCrossValidationExperiment
 load_dotenv()
@@ -51,6 +50,7 @@ class Pipeline(object):
         self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
         self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None))
         self.arff_dir = self.expdir / 'arffs'
+        self.result_df = None
         if os.path.exists(self.data + '.tbi'):
             self._tabix = self.data + '.tbi'
         else:
@@ -132,7 +132,7 @@ class Pipeline(object):
                     sample_gene_d[sample][gene].append(variant(score, zygo))
         return sample_gene_d
 
-    def process_vcf(self, threads=1):
+    def process_vcf(self):
         vcf = VariantFile(self.data, index_filename=self._tabix)
         for contig in range(1, 23):
             print('Processing chromosome {}...'.format(contig))
@@ -148,7 +148,6 @@ class Pipeline(object):
 
     def run_weka(self, n_runs=1):
         jvm.start()
-        Random(42)
         datasets = [str(arff) for arff in self.arff_dir.glob('*.arff')]
         classifiers = [Classifier(classname=clf, options=opts) for
                        clf, opts in self.classifiers.items()]
@@ -165,20 +164,56 @@ class Pipeline(object):
         exp.run()
         loader = converters.loader_for_file(result)
         cv_results = loader.load_file(result)
+        # run_idx = cv_results.attribute_by_name('Key_Run').index
+        # fold_idx = cv_results.attribute_by_name('Key_Fold').index
+        gene_idx = cv_results.attribute_by_name('Key_Dataset').index
+        clf_idx = cv_results.attribute_by_name('Key_Scheme').index
         mcc_idx = cv_results.attribute_by_name('Matthews_correlation').index
-        run_idx = cv_results.attribute_by_name('Key_Run').index
-        fold_idx = cv_results.attribute_by_name('Key_Fold').index
-        for n in range(1, n_runs + 1):
-            gene_result_d = defaultdict(lambda: defaultdict(list))
+        gene_result_d = defaultdict(lambda: defaultdict(list))
+        for row in cv_results:
+            gene = row.get_string_value(gene_idx)
+            clf = row.get_string_value(clf_idx)
+            mcc = row.get_string_value(mcc_idx)
+            gene_result_d[gene][clf].append(mcc)
         jvm.stop()
+        genes = list(gene_result_d.keys())
+        clfs = list(gene_result_d[genes[0]].keys())
+        idx = [(gene, clf) for gene in genes for clf in clfs]
+        idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
+        df = pd.DataFrame(list(fold for clf in gene_result_d.values() for
+                               fold in clf.values()), index=idx)
+        df['Mean'] = df.mean(axis=1)
+        df.to_csv('gene_MCC_summary.csv')
+        self.result_df = df
+
+    def write_results(self):
+        genes = [k for k in OrderedDict.fromkeys(self.result_df.index.get_level_values('gene')).keys()]
+        clfs = set(self.result_df.index.get_level_values('classifier'))
+        clf_d = OrderedDict([('gene', list(genes))])
+        for clf in clfs:
+            clf_df = self.result_df.xs(clf, level='classifier')
+            clf_df.to_csv(self.resultsdir / (clf + '-recap.csv'))
+            clf_d[clf] = list(clf_df['meanMCC'])
+        mean_df = pd.DataFrame.from_dict(clf_d)
+        mean_df.to_csv(self.resultsdir / 'all-classifier_summary.csv',
+                       index=False)
+        max_vals = mean_df.max(axis=1)
+        final_df = pd.DataFrame({'gene': genes, 'maxMCC': max_vals})
+        final_df.sort_values('maxMCC', ascending=False)
+        final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
 
 
 def main():
     pipeline = Pipeline()
-    pipeline.process_vcf(os.getenv("NB_CORES"))
+    pipeline.process_vcf()
     print('Feature matrix loaded.')
     pipeline.split_matrix()
     print('Matrix split by gene.')
     print('Running experiment...')
     pipeline.run_weka()
+    pipeline.write_results()
     print('Gene scoring completed. Analysis summary in RESULTS/ directory.')
+
+
+if __name__ == '__main__':
+    main()
