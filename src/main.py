@@ -18,6 +18,7 @@ TODO:
     * convert process_vcf to multiprocessing
     * figure out random seed setting
     * convert Weka method to incorporate multi-run experiments
+    * finish method/function documentation
 """
 # Import env information
 import os
@@ -38,13 +39,11 @@ load_dotenv()
 
 class Pipeline(object):
     """
-
-
     Attributes:
 
     """
     def __init__(self):
-        self.expdir = Path(os.getenv("EXPERIMENTDIR"))
+        self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
         self.data = os.getenv("DATA")
         self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
