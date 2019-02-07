@@ -18,11 +18,14 @@ TODO:
     * convert process_vcf to multiprocessing
     * figure out random seed setting
     * convert Weka method to incorporate multi-run experiments
+    * add batching for Weka experiments
     * finish method/function documentation
 """
 # Import env information
 import os
 import utils
+import re
+import sys
 import pandas as pd
 import numpy as np
 from collections import defaultdict, namedtuple, OrderedDict
@@ -115,14 +118,43 @@ class Pipeline(object):
         Returns:
             dict: A dictionary of samples, with each sample corresponding to a
                 dictionary of gene: variant pairs
+
+        Note: Currently, an info field is required with functional annotations
+        from SnpEff, see Danny Lee for details on this
         """
         variant = namedtuple('Variant', ['EA', 'zygo'])
         sample_gene_d = defaultdict(lambda: defaultdict(list))
+        ann_idx, type_idx, gene_idx = None, None, None
+        for rec in vcf.header.records:
+            if rec.get('ID') == 'ANN':
+                fields = rec.get('Description')
+                fields = re.sub('Functional annotations: ', '',
+                                fields).strip('"\'').split('|')
+                fields = [field.strip() for field in fields]
+                ann_idx = fields.index('Annotation')
+                type_idx = fields.index('Transcript_BioType')
+                gene_idx = fields.index('Gene_Name')
+                break
+        if ann_idx is None or type_idx is None or gene_idx is None:
+            sys.exit('Could not find variant annotation info in header. Please '
+                     'make sure to have SnpEff annotations in ANN subfield of '
+                     'INFO column.')
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
-            EA = utils.refactor_EA(rec.info['EA'])
-            if not EA or gene not in self.test_genes:
+            EA = None
+            # check for any nonsense variants based on SnpEff annotations
+            if not isinstance(rec.info['ANN'], tuple):
+                raise TypeError('"ANN" field not expected tuple type.')
+            for ann in rec.info['ANN']:
+                ann = ann.split('|')
+                if gene == ann[gene_idx]:
+                    var_ann = ann[ann_idx]
+                    var_type = ann[type_idx]
+                    EA = utils.refactor_EA(rec.info['EA'], var_ann,
+                                           var_type)
+            if EA is None or gene not in self.test_genes:
                 continue
+            # loop through each sample genotype to check if variant is present
             for sample, info in rec.samples.items():
                 zygo = utils.convert_zygo(info['GT'])
                 if zygo == 0:
@@ -175,12 +207,24 @@ class Pipeline(object):
             mcc = row.get_string_value(mcc_idx)
             gene_result_d[gene][clf].append(mcc)
         jvm.stop()
+        clf_remap = {
+            'weka.classifiers.rules.PART': 'PART',
+            'weka.classifiers.rules.JRip': 'JRip',
+            'weka.classifiers.trees.J48': 'J48',
+            'weka.classifiers.trees.RandomForest': 'RF',
+            'weka.classifiers.bayes.NaiveBayes': 'NaiveBayes',
+            'weka.classifiers.functions.Logistic': 'LogisticR',
+            'weka.classifiers.meta.AdaBoostM1': 'Adaboost',
+            'weka.classifiers.functions.MultiLayerPerceptron': 'MultiLayerPerceptron',
+            'weka.classifiers.lazy.IBk': 'kNN'
+        }
         genes = list(gene_result_d.keys())
         clfs = list(gene_result_d[genes[0]].keys())
         idx = [(gene, clf) for gene in genes for clf in clfs]
         idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
         df = pd.DataFrame(list(fold for clf in gene_result_d.values() for
                                fold in clf.values()), index=idx)
+        df.rename(index=clf_remap, inplace=True)
         df['Mean'] = df.mean(axis=1)
         df.to_csv('gene_MCC_summary.csv')
         self.result_df = df

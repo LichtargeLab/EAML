@@ -8,16 +8,18 @@ Created on 2019-01-28
 """
 import re
 import csv
-import pandas as pd
 
 
-def refactor_EA(EA):
+def refactor_EA(EA, var_ann, var_type):
     newEA = []
     for score in EA:
         try:
             score = float(score)
-        except (ValueError, TypeError):
-            if score in ['STOP', 'fs-indel', 'no_STOP']:
+        except TypeError:
+            if ((re.search(r'frameshift', var_ann) or
+                 re.search(r'stop_gained', var_ann) or
+                 re.search(r'stop_lost', var_ann)) and
+                    var_type == 'protein_coding'):
                 score = 100
         newEA.append(score)
     return newEA
