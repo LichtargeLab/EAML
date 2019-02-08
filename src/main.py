@@ -6,13 +6,7 @@ Created on 1/21/19
 
 @author: dillonshapiro
 
-pyEA-ML
-General Description:HERE
-
-Example:
-    Use reStructuredText here. For example::
-
-        $ python Pyea-Ml.py
+Main script for EA-ML pipeline.
 
 TODO:
     * convert process_vcf to multiprocessing
@@ -122,7 +116,29 @@ class Pipeline(object):
         Note: Currently, an info field is required with functional annotations
         from SnpEff, see Danny Lee for details on this
         """
-        variant = namedtuple('Variant', ['EA', 'zygo'])
+        def __checkANN(gene, score):
+            EA = None
+            variant = namedtuple('Variant', ['EA', 'zygo'])
+            if gene not in self.test_genes:
+                return False
+            if not isinstance(rec.info['ANN'], tuple):
+                raise TypeError('"ANN" field not expected tuple type.')
+            for ann in rec.info['ANN']:
+                ann = ann.split('|')
+                if gene == ann[gene_idx]:
+                    var_ann = ann[ann_idx]
+                    var_type = ann[type_idx]
+                    EA = utils.refactor_EA(score, var_ann, var_type)
+            if not EA:
+                raise ValueError('Matching SnpEff annotation not found.')
+            # loop through each sample genotype to check if variant is present
+            for sample, info in rec.samples.items():
+                zygo = utils.convert_zygo(info['GT'])
+                if zygo == 0:
+                    continue
+                for s in EA:
+                    sample_gene_d[sample][gene].append(variant(s, zygo))
+
         sample_gene_d = defaultdict(lambda: defaultdict(list))
         ann_idx, type_idx, gene_idx = None, None, None
         for rec in vcf.header.records:
@@ -141,26 +157,23 @@ class Pipeline(object):
                      'INFO column.')
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
-            EA = None
-            # check for any nonsense variants based on SnpEff annotations
-            if not isinstance(rec.info['ANN'], tuple):
-                raise TypeError('"ANN" field not expected tuple type.')
-            for ann in rec.info['ANN']:
-                ann = ann.split('|')
-                if gene == ann[gene_idx]:
-                    var_ann = ann[ann_idx]
-                    var_type = ann[type_idx]
-                    EA = utils.refactor_EA(rec.info['EA'], var_ann,
-                                           var_type)
-            if EA is None or gene not in self.test_genes:
-                continue
-            # loop through each sample genotype to check if variant is present
-            for sample, info in rec.samples.items():
-                zygo = utils.convert_zygo(info['GT'])
-                if zygo == 0:
-                    continue
-                for score in EA:
-                    sample_gene_d[sample][gene].append(variant(score, zygo))
+            score = rec.info['EA']
+            # check for overlapping transcripts
+            if isinstance(gene, tuple):
+                if len(gene) == len(score):
+                    g_ea_match = zip(gene, score)
+                elif len(score) == 1:
+                    g_ea_match = zip(gene, score * len(gene))
+                else:
+                    raise ValueError("Length of EA tuple doesn't match "
+                                     "expected sizes.")
+                g_ea_d = defaultdict(list)
+                for g, s in g_ea_match:
+                    g_ea_d[g].append(s)
+                for g, s in g_ea_d.items():
+                    __checkANN(g, s)
+            else:
+                __checkANN(gene, score)
         return sample_gene_d
 
     def process_vcf(self):
