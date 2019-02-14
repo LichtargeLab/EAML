@@ -14,17 +14,13 @@ TODO:
     * convert Weka method to incorporate multi-run experiments
     * add batching for Weka experiments
     * finish method/function documentation
-    * remove ANN parsing requirement
-    * add trauma parser
 """
 # Import env information
 import os
 import utils
-import re
-import sys
 import pandas as pd
 import numpy as np
-from collections import defaultdict, namedtuple, OrderedDict
+from collections import defaultdict, OrderedDict, namedtuple
 from pathlib import Path
 from pysam import VariantFile
 from SupportClasses import DesignMatrix
@@ -45,6 +41,7 @@ class Pipeline(object):
         self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
         self.data = os.getenv("DATA")
+        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
         self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
         self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None))
         self.arff_dir = self.expdir / 'arffs'
@@ -116,9 +113,12 @@ class Pipeline(object):
                 dictionary of gene: variant pairs
         """
         sample_gene_d = defaultdict(lambda: defaultdict(list))
+        variant = namedtuple('Variant', ['zygo', 'EA'])
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
-            score = rec.info['EA']
+            score = utils.refactor_EA(rec.info['EA'])
+            if all(x is None for x in score):
+                continue
             # check for overlapping transcripts
             if isinstance(gene, tuple):
                 if len(gene) == len(score):
@@ -128,11 +128,20 @@ class Pipeline(object):
                 else:
                     raise ValueError("Length of EA tuple doesn't match "
                                      "expected sizes.")
-                g_ea_d = defaultdict(list)
-                for g, s in g_ea_match:
-                    g_ea_d[g] += utils.refactor_EA([s])
             else:
-                score = utils.refactor_EA(score)
+                g_ea_match = zip([gene] * len(score), score)
+            for sample in self.samples:
+                try:
+                    gt = rec.samples[sample]['GT']
+                except KeyError:
+                    raise KeyError("Sample ID doesn't exists in VCF.")
+                zygo = utils.convert_zygo(gt)
+                if zygo == 0:
+                    continue
+                for g, ea in g_ea_match:
+                    if ea is not None:
+                        var = variant(zygo, ea)
+                        sample_gene_d[sample][gene].append(var)
         return sample_gene_d
 
     def process_vcf(self):

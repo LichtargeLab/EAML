@@ -19,6 +19,8 @@ def refactor_EA(EA):
             if (re.search(r'fs-indel', EA) or
                  re.search(r'STOP', EA)):
                 score = 100
+            else:
+                score = None
         newEA.append(score)
     return newEA
 
