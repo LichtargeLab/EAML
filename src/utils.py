@@ -10,16 +10,14 @@ import re
 import csv
 
 
-def refactor_EA(EA, var_ann, var_type):
+def refactor_EA(EA):
     newEA = []
     for score in EA:
         try:
             score = float(score)
         except TypeError:
-            if ((re.search(r'frameshift', var_ann) or
-                 re.search(r'stop_gained', var_ann) or
-                 re.search(r'stop_lost', var_ann)) and
-                    var_type == 'protein_coding'):
+            if (re.search(r'fs-indel', EA) or
+                 re.search(r'STOP', EA)):
                 score = 100
         newEA.append(score)
     return newEA

@@ -14,6 +14,8 @@ TODO:
     * convert Weka method to incorporate multi-run experiments
     * add batching for Weka experiments
     * finish method/function documentation
+    * remove ANN parsing requirement
+    * add trauma parser
 """
 # Import env information
 import os
@@ -112,49 +114,8 @@ class Pipeline(object):
         Returns:
             dict: A dictionary of samples, with each sample corresponding to a
                 dictionary of gene: variant pairs
-
-        Note: Currently, an info field is required with functional annotations
-        from SnpEff, see Danny Lee for details on this
         """
-        def __checkANN(gene, score):
-            EA = None
-            variant = namedtuple('Variant', ['EA', 'zygo'])
-            if gene not in self.test_genes:
-                return False
-            if not isinstance(rec.info['ANN'], tuple):
-                raise TypeError('"ANN" field not expected tuple type.')
-            for ann in rec.info['ANN']:
-                ann = ann.split('|')
-                if gene == ann[gene_idx]:
-                    var_ann = ann[ann_idx]
-                    var_type = ann[type_idx]
-                    EA = utils.refactor_EA(score, var_ann, var_type)
-            if not EA:
-                raise ValueError('Matching SnpEff annotation not found.')
-            # loop through each sample genotype to check if variant is present
-            for sample, info in rec.samples.items():
-                zygo = utils.convert_zygo(info['GT'])
-                if zygo == 0:
-                    continue
-                for s in EA:
-                    sample_gene_d[sample][gene].append(variant(s, zygo))
-
         sample_gene_d = defaultdict(lambda: defaultdict(list))
-        ann_idx, type_idx, gene_idx = None, None, None
-        for rec in vcf.header.records:
-            if rec.get('ID') == 'ANN':
-                fields = rec.get('Description')
-                fields = re.sub('Functional annotations: ', '',
-                                fields).strip('"\'').split('|')
-                fields = [field.strip() for field in fields]
-                ann_idx = fields.index('Annotation')
-                type_idx = fields.index('Transcript_BioType')
-                gene_idx = fields.index('Gene_Name')
-                break
-        if ann_idx is None or type_idx is None or gene_idx is None:
-            sys.exit('Could not find variant annotation info in header. Please '
-                     'make sure to have SnpEff annotations in ANN subfield of '
-                     'INFO column.')
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
             score = rec.info['EA']
@@ -169,11 +130,9 @@ class Pipeline(object):
                                      "expected sizes.")
                 g_ea_d = defaultdict(list)
                 for g, s in g_ea_match:
-                    g_ea_d[g].append(s)
-                for g, s in g_ea_d.items():
-                    __checkANN(g, s)
+                    g_ea_d[g] += utils.refactor_EA([s])
             else:
-                __checkANN(gene, score)
+                score = utils.refactor_EA(score)
         return sample_gene_d
 
     def process_vcf(self):
@@ -208,8 +167,6 @@ class Pipeline(object):
         exp.run()
         loader = converters.loader_for_file(result)
         cv_results = loader.load_file(result)
-        # run_idx = cv_results.attribute_by_name('Key_Run').index
-        # fold_idx = cv_results.attribute_by_name('Key_Fold').index
         gene_idx = cv_results.attribute_by_name('Key_Dataset').index
         clf_idx = cv_results.attribute_by_name('Key_Scheme').index
         mcc_idx = cv_results.attribute_by_name('Matthews_correlation').index
