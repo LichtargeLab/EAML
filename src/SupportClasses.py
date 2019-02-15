@@ -14,8 +14,11 @@ import numpy as np
 
 class DesignMatrix(object):
     def __init__(self, matrix, feature_labels, id_labels):
-        self.X = matrix[:, :-1].copy()
-        self.y = matrix[:, -1].copy()
+        self._matrix = matrix
+        self._feature_labels = feature_labels
+        self._id_labels = id_labels
+        self.X = matrix[:, :-1]
+        self.y = matrix[:, -1]
         self._ft_map = OrderedDict((feature, i) for i, feature in
                                    enumerate(feature_labels))
         self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
@@ -34,10 +37,15 @@ class DesignMatrix(object):
         if hyps:
             col_names = ['_'.join([gene, hyp]) for hyp in hyps]
             col_idxs = [self._ft_map[ft] for ft in col_names]
-            return self.X[:, col_idxs]
+            col_idxs.append(self._matrix.shape[1] - 1)
+            return DesignMatrix(self._matrix[:, col_idxs],
+                                self._feature_labels[:, col_idxs],
+                                self._id_labels)
         else:
             idx = self._ft_map[gene]
-            return self.X[:, idx]
+            idx = [idx, self._matrix.shape[1] - 1]
+            return DesignMatrix(self._matrix[:, idx],
+                                self._feature_labels[:, idx], self._id_labels)
 
 
 class ConfusionMatrix(object):
@@ -57,8 +65,10 @@ class ConfusionMatrix(object):
         fp (int): Number of false positive predictions
         fn (int): Number of false negative predictions
     """
-    def __init__(self, tp, tn, fp, fn):
-        self.tp = tp
+    def __init__(self, y_pred, y_truth):
+        self.y_pred = y_pred
+        self.y_truth = y_truth
+        self.tp = np.sum(y_pred == y_truth == 1)
         self.tn = tn
         self.fp = fp
         self.fn = fn

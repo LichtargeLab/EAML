@@ -10,10 +10,10 @@ Main script for EA-ML pipeline.
 
 TODO:
     * convert process_vcf to multiprocessing
-    * figure out random seed setting
     * convert Weka method to incorporate multi-run experiments
     * add batching for Weka experiments
     * finish method/function documentation
+    * add check for existing .arff matrix
 """
 # Import env information
 import os
@@ -25,10 +25,10 @@ from pathlib import Path
 from pysam import VariantFile
 from SupportClasses import DesignMatrix
 from dotenv import load_dotenv
-import weka.core.converters as converters
+from sklearn.model_selection import StratifiedKFold
+from weka.core.converters import Loader
 import weka.core.jvm as jvm
-from weka.classifiers import Classifier
-from weka.experiments import SimpleCrossValidationExperiment
+from weka.classifiers import Classifier, Evaluation
 load_dotenv()
 
 
@@ -38,28 +38,32 @@ class Pipeline(object):
 
     """
     def __init__(self):
+        # load data file paths
         self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
-        self.data = os.getenv("DATA")
-        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
-        self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
-        self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None))
         self.arff_dir = self.expdir / 'arffs'
-        self.result_df = None
+        if not os.path.exists(self.arff_dir):
+            os.mkdir(self.arff_dir)
+        if not os.path.exists(self.resultsdir):
+            os.mkdir(self.resultsdir)
+        self.data = os.getenv("DATA")
         if os.path.exists(self.data + '.tbi'):
             self._tabix = self.data + '.tbi'
         else:
             self._tabix = None
             print('Unable to use multiprocessing for VCF parsing without '
                   'index file.')
+        # get feature and sample info
+        self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
+        self.samples.sort_values(by=0, inplace=True)
+        self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None))
         self._ft_labels = self.convert_genes_to_hyp()
+        self.result_df = None
+        # initialize feature matrix
         matrix = np.ones((len(self.samples), len(self._ft_labels) + 1))
         matrix[:, -1] = self.samples[1]
         self.matrix = DesignMatrix(matrix, self._ft_labels, self.samples[0])
-        if not os.path.exists(self.arff_dir):
-            os.mkdir(self.arff_dir)
-        if not os.path.exists(self.resultsdir):
-            os.mkdir(self.resultsdir)
+        # map classifiers to hyperparameters
         classifiers = [
             'weka.classifiers.rules.PART',
             'weka.classifiers.rules.JRip',
@@ -87,6 +91,7 @@ class Pipeline(object):
              'weka.core.EuclideanDistance', '-R', 'first-last']
         ]
         self.classifiers = dict(zip(classifiers, params))
+        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
     def convert_genes_to_hyp(self):
         ft_labels = []
@@ -117,7 +122,7 @@ class Pipeline(object):
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
             score = utils.refactor_EA(rec.info['EA'])
-            if all(x is None for x in score):
+            if not any(score):
                 continue
             # check for overlapping transcripts
             if isinstance(gene, tuple):
@@ -150,41 +155,43 @@ class Pipeline(object):
             print('Processing chromosome {}...'.format(contig))
             sample_gene_d = self.process_contig(vcf, contig=str(contig))
             utils.update_matrix(self.matrix, sample_gene_d)
+        utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
+                         self.expdir / 'design_matrix.arff')
 
     def split_matrix(self):
+        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+        folds = kf.split(self.matrix.X, self.matrix.y)
         for gene in self.test_genes:
             hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
             split = self.matrix.get_gene(gene, hyps=hyps)
             ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
-            utils.write_arff(split, ft_labels, self.arff_dir / (gene + '.arff'))
+            for i, train, test in enumerate(folds):
+                Xtrain = split.X[train, :]
+                ytrain = split.y[train, :]
+                Xtest = split.X[test, :]
+                ytest = split.y[test, :]
+                utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
+                    '{}_{}-train.arff'.format(gene, i)))
+                utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
+                    '{}_{}-test.arff'.format(gene, i)))
 
-    def run_weka(self, n_runs=1):
+    def run_weka(self):
         jvm.start()
-        datasets = [str(arff) for arff in self.arff_dir.glob('*.arff')]
-        classifiers = [Classifier(classname=clf, options=opts) for
-                       clf, opts in self.classifiers.items()]
-        result = str(self.resultsdir / 'full_results-cv.arff')
-        exp = SimpleCrossValidationExperiment(
-            classification=True,
-            runs=n_runs,
-            folds=10,
-            datasets=datasets,
-            classifiers=classifiers,
-            result=result
-        )
-        exp.setup()
-        exp.run()
-        loader = converters.loader_for_file(result)
-        cv_results = loader.load_file(result)
-        gene_idx = cv_results.attribute_by_name('Key_Dataset').index
-        clf_idx = cv_results.attribute_by_name('Key_Scheme').index
-        mcc_idx = cv_results.attribute_by_name('Matthews_correlation').index
         gene_result_d = defaultdict(lambda: defaultdict(list))
-        for row in cv_results:
-            gene = row.get_string_value(gene_idx)
-            clf = row.get_string_value(clf_idx)
-            mcc = row.get_string_value(mcc_idx)
-            gene_result_d[gene][clf].append(mcc)
+        for gene in self.test_genes:
+            for i in range(10):
+                train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
+                test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
+                loader = Loader(classname='weka.core.converters.ArffLoader')
+                train = loader.load_file(train)
+                test = loader.load_file(test)
+                for clf_str, opts in self.classifiers.items():
+                    clf = Classifier(classname=clf_str, options=opts)
+                    clf.build_classifier(train)
+                    evl = Evaluation(test)
+                    _ = evl.test_model(clf, test)
+                    mcc = evl.matthews_correlation_coefficient(1)
+                    gene_result_d[gene][clf_str].append(mcc)
         jvm.stop()
         clf_remap = {
             'weka.classifiers.rules.PART': 'PART',
@@ -224,6 +231,8 @@ class Pipeline(object):
         final_df.sort_values('maxMCC', ascending=False)
         final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
 
+    def cleanup(self):
+        pass
 
 def main():
     pipeline = Pipeline()
@@ -234,6 +243,7 @@ def main():
     print('Running experiment...')
     pipeline.run_weka()
     pipeline.write_results()
+    pipeline.cleanup()
     print('Gene scoring completed. Analysis summary in RESULTS/ directory.')
 
 

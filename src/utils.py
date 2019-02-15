@@ -15,9 +15,9 @@ def refactor_EA(EA):
     for score in EA:
         try:
             score = float(score)
-        except TypeError:
-            if (re.search(r'fs-indel', EA) or
-                 re.search(r'STOP', EA)):
+        except (ValueError, TypeError):
+            if (re.search(r'fs-indel', score) or
+                 re.search(r'STOP', score)):
                 score = 100
             else:
                 score = None
@@ -59,7 +59,7 @@ def update_matrix(matrix, sample_gene_d):
                                       '_'.join([gene, hyp]), sample)
 
 
-def write_arff(matrix, ft_labels, output):
+def write_arff(X, y, ft_labels, output):
     attrs = []
     examples = []
     attrs.append(['@relation '
@@ -67,9 +67,9 @@ def write_arff(matrix, ft_labels, output):
     for ft in ft_labels:
         attrs.append(['@attribute {} REAL'.format(ft)])
     attrs.append(['@data'])
-    for i, row in matrix.X:
+    for i, row in X:
         example = [str(x) for x in row]
-        example.append(str(matrix.y[i]))
+        example.append(str(y[i]))
         examples.append(example)
     attrs.append(['@attribute class {0,1}'])
     with open(output, 'w') as f:
