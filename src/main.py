@@ -23,7 +23,7 @@ import numpy as np
 from collections import defaultdict, OrderedDict, namedtuple
 from pathlib import Path
 from pysam import VariantFile
-from SupportClasses import DesignMatrix
+from design_matrix import DesignMatrix
 from dotenv import load_dotenv
 from sklearn.model_selection import StratifiedKFold
 from weka.core.converters import Loader
@@ -35,6 +35,20 @@ load_dotenv()
 class Pipeline(object):
     """
     Attributes:
+        expdir (Path): filepath to experiment folder
+        resultsdir (Path): filepath to results folder
+        arff_dir (Path): filepath to folder for storing temporary .arff files
+        data (str): filepath to VCF file
+        tabix (str): filepath to index file for VCF
+        samples (pd.DataFrame): Table of samples with corresponding disease
+            status
+        test_genes (list): list of genes to test
+        result_df (pd.DataFrame): The DataFrame that stores experiment results
+        matrix (DesignMatrix): Object for containing feature information for
+            each gene and sample.
+        classifiers (list): A list of tuples that maps classifiers from Weka to
+            their hyperparameters.
+        hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
 
     """
     def __init__(self):
@@ -48,9 +62,9 @@ class Pipeline(object):
             os.mkdir(self.resultsdir)
         self.data = os.getenv("DATA")
         if os.path.exists(self.data + '.tbi'):
-            self._tabix = self.data + '.tbi'
+            self.tabix = self.data + '.tbi'
         else:
-            self._tabix = None
+            self.tabix = None
             print('Unable to use multiprocessing for VCF parsing without '
                   'index file.')
         # get feature and sample info
@@ -61,8 +75,8 @@ class Pipeline(object):
         self.result_df = None
         # initialize feature matrix
         matrix = np.ones((len(self.samples), len(self._ft_labels) + 1))
-        matrix[:, -1] = self.samples[1]
-        self.matrix = DesignMatrix(matrix, self._ft_labels, self.samples[0])
+        self.matrix = DesignMatrix(matrix, self.samples[1], self._ft_labels,
+                                   self.samples[0])
         # map classifiers to hyperparameters
         classifiers = [
             'weka.classifiers.rules.PART',
@@ -94,6 +108,13 @@ class Pipeline(object):
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
     def convert_genes_to_hyp(self):
+        """
+        Converts the test genes to actual feature labels based on test
+        hypotheses.
+
+        Returns:
+            list: The list of feature labels.
+        """
         ft_labels = []
         for gene in self.test_genes:
             ft_labels.append(gene + '_D1')
@@ -150,15 +171,18 @@ class Pipeline(object):
         return sample_gene_d
 
     def process_vcf(self):
-        vcf = VariantFile(self.data, index_filename=self._tabix)
+        """The overall method for processing the entire VCF file."""
+        vcf = VariantFile(self.data, index_filename=self.tabix)
         for contig in range(1, 23):
             print('Processing chromosome {}...'.format(contig))
             sample_gene_d = self.process_contig(vcf, contig=str(contig))
             utils.update_matrix(self.matrix, sample_gene_d)
+        self.matrix.X = 1 - self.matrix.X
         utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
                          self.expdir / 'design_matrix.arff')
 
     def split_matrix(self):
+        """Splits the DesignMatrix K times for each gene."""
         kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
         folds = kf.split(self.matrix.X, self.matrix.y)
         for gene in self.test_genes:
@@ -176,6 +200,12 @@ class Pipeline(object):
                     '{}_{}-test.arff'.format(gene, i)))
 
     def run_weka(self):
+        """
+        The overall Weka experiment. The steps include loading the K .arff files
+        for each gene, building a new classifier based on the training set, then
+        evaluating the model on the test set and outputting the MCC to a
+        dictionary.
+        """
         jvm.start()
         gene_result_d = defaultdict(lambda: defaultdict(list))
         for gene in self.test_genes:
@@ -232,7 +262,12 @@ class Pipeline(object):
         final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
 
     def cleanup(self):
+        """
+        Cleans up all of the .arff files subsetted for each gene. These
+        aren't needed since the original matrix contains all information.
+        """
         pass
+
 
 def main():
     pipeline = Pipeline()
