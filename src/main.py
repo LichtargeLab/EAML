@@ -12,10 +12,8 @@ TODO:
     * convert process_vcf to multiprocessing
     * convert Weka method to incorporate multi-run experiments
     * add batching for Weka experiments
-    * finish method/function documentation
     * add check for existing .arff matrix
 """
-# Import env information
 import os
 import utils
 import pandas as pd
@@ -52,7 +50,7 @@ class Pipeline(object):
 
     """
     def __init__(self):
-        # load data file paths
+        # Import env information
         self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
         self.arff_dir = self.expdir / 'arffs'
@@ -139,7 +137,6 @@ class Pipeline(object):
                 dictionary of gene: variant pairs
         """
         sample_gene_d = defaultdict(lambda: defaultdict(list))
-        variant = namedtuple('Variant', ['zygo', 'EA'])
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
             score = utils.refactor_EA(rec.info['EA'])
@@ -154,7 +151,13 @@ class Pipeline(object):
                 else:
                     raise ValueError("Length of EA tuple doesn't match "
                                      "expected sizes.")
+                g_ea_match = [(g, ea) for g, ea in g_ea_match if g in
+                              self.test_genes]
+                if not g_ea_match:
+                    continue
             else:
+                if gene not in self.test_genes:
+                    continue
                 g_ea_match = zip([gene] * len(score), score)
             for sample in self.samples:
                 try:
@@ -166,8 +169,11 @@ class Pipeline(object):
                     continue
                 for g, ea in g_ea_match:
                     if ea is not None:
-                        var = variant(zygo, ea)
-                        sample_gene_d[sample][gene].append(var)
+                        for hyp in ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']:
+                            if utils.check_hyp(zygo, ea, hyp):
+                                self.matrix.update(
+                                    utils.neg_pAFF(ea, zygo),
+                                    '_'.join([g, hyp]), sample)
         return sample_gene_d
 
     def process_vcf(self):
@@ -231,7 +237,8 @@ class Pipeline(object):
             'weka.classifiers.bayes.NaiveBayes': 'NaiveBayes',
             'weka.classifiers.functions.Logistic': 'LogisticR',
             'weka.classifiers.meta.AdaBoostM1': 'Adaboost',
-            'weka.classifiers.functions.MultiLayerPerceptron': 'MultiLayerPerceptron',
+            'weka.classifiers.functions.MultiLayerPerceptron':
+                'MultiLayerPerceptron',
             'weka.classifiers.lazy.IBk': 'kNN'
         }
         genes = list(gene_result_d.keys())
@@ -246,7 +253,8 @@ class Pipeline(object):
         self.result_df = df
 
     def write_results(self):
-        genes = [k for k in OrderedDict.fromkeys(self.result_df.index.get_level_values('gene')).keys()]
+        genes = [k for k in OrderedDict.fromkeys(
+            self.result_df.index.get_level_values('gene')).keys()]
         clfs = set(self.result_df.index.get_level_values('classifier'))
         clf_d = OrderedDict([('gene', list(genes))])
         for clf in clfs:

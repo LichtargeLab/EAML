@@ -67,27 +67,6 @@ def convert_zygo(genotype):
     return zygo
 
 
-def update_matrix(matrix, sample_gene_d):
-    """
-    Updates a DesignMatrix given a dictionary of samples to variants.
-
-    Args:
-        matrix (DesignMatrix): The DesignMatrix to update
-        sample_gene_d (dict): A nested dictionary containing samples as keys
-            with genes as values, then a list of variants for each gene key.
-
-    Returns:
-
-    """
-    for sample, gene_d in sample_gene_d.items():
-        for gene, variants in gene_d.items():
-            for var in variants:
-                for hyp in ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']:
-                    if check_hyp(var.zygo, var.EA, hyp):
-                        matrix.update(neg_pAFF(var.EA, var.zygo),
-                                      '_'.join([gene, hyp]), sample)
-
-
 def write_arff(X, y, ft_labels, output):
     """
     Outputs an .arff file corresponding to a feature matrix of interest.
