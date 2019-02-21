@@ -10,8 +10,9 @@ This pipeline uses a series of supervised learning algorithms to score a gene's
 contribution to disease risk based on it's case/control separation ability. This
 is all based on a probability score (pAFF) computed using EA.
 
-The output is a ranked list of genes which can be used to inform followup
-analyses.
+The output is a ranked list of genes scored by the Matthew's Correlation
+Coefficient (MCC), effectively determining a gene's relevance for disease based
+on it's independent capacity to distinguish case from control patients.
 
 Usage
 ----------------------
@@ -71,7 +72,7 @@ extra information is required:
 Software Requirements
 ----------------------
 
-* Java SE Development Kit 8 (version 181 or higher)
+* Java SE Development Kit 8 (version 181_b13 or higher)
 * Anaconda3
 * Python 3.6.8
 

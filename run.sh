@@ -5,10 +5,8 @@ if ! which conda > /dev/null; then
     echo -e "Conda not found! Install? (y/n) \c"
     read REPLY
     if [ "$REPLY" = "y" ]; then
-        wget https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh -O ~/anaconda.sh
-        bash ~/anaconda.sh -b -p $HOME/anaconda3
-        echo 'export PATH="$HOME/anaconda3/bin:$PATH"' >> $HOME/.bashrc # add anaconda bin to the environment
-        export PATH="$HOME/anaconda3/bin:$PATH"
+        echo 'export PATH=/lab/cedar/shared/anaconda3/bin:$PATH' >> $HOME/.bashrc
+        export PATH='/lab/cedar/shared/anaconda3/bin:$PATH'
     else
         echo "Conda is required for proper virtual environment setup."
         exit 1
