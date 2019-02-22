@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-# check for conda and install if needed. Will download python 3.6. Also, could switch this to miniconda
+### Environment Setup ###
+# readlink -f doesn't work on OS X, so this can only be done on a Linux system
+# Alternatively, this will work on OS X if `greadlink` is installed through
+# Homebrew and added to PATH
+repSource=$(readlink -f `dirname ${BASH_SOURCE[0]}`)
+# check for conda
 if ! which conda > /dev/null; then
     echo -e "Conda not found! Install? (y/n) \c"
     read REPLY
@@ -21,16 +26,13 @@ if [[ $ENVS = *$ENV_NAME* ]]; then
    source activate ${ENV_NAME}
 else
     # make virtual environment
-    conda create --no-deps -n ${ENV_NAME} --yes
+    conda env create -f ${repSource}/environment.yml
     source activate ${ENV_NAME}
-    pip install pip==18.1
-    pip install -r requirements.txt
 fi
 
 # Set-up .env
 if [ ! -f ./.env ]; then
     # Make the file
-    touch ./.env
     # Record the results folder destination
     while getopts ":he:d:s:g:" opt; do
         case ${opt} in
@@ -39,19 +41,23 @@ if [ ! -f ./.env ]; then
                 echo "./run.sh -e <experiment folder> -d <data> -s <sample file> -g <gene list>"
                 echo "./run.sh -h           Display this help message."
                 exit 0;;
-            e) dotenv -f .env set EXPDIR $OPTARG;;
-            d) dotenv -f .env set DATA $OPTARG;;
-            s) dotenv -f .env set SAMPLES $OPTARG;;
-            g) dotenv -f .env set GENELIST $OPTARG;;
+            e) EXPDIR=$OPTARG;;
+            d) DATA=$OPTARG;;
+            s) SAMPLES=$OPTARG;;
+            g) GENELIST=$OPTARG;;
             \?)
                 echo "Invalid Option: -$OPTARG" 1>&2
                 exit 1;;
         esac
     done
     shift $((OPTIND -1))
+    cd ${EXPDIR}
+    touch .env
+    dotenv -f .env set EXPDIR $OPTARG
+    dotenv -f .env set DATA $OPTARG
+    dotenv -f .env set SAMPLES $OPTARG
+    dotenv -f .env set GENELIST $OPTARG
 fi
 
 # run pipeline
-# readlink -f doesn't work on OS X, so this can only be done on a Linux system
-repSource=$(readlink -f `dirname ${BASH_SOURCE[0]}`)
 python ${repSource}/src/main.py
