@@ -18,7 +18,7 @@ import os
 import utils
 import pandas as pd
 import numpy as np
-from collections import defaultdict, OrderedDict, namedtuple
+from collections import defaultdict, OrderedDict
 from pathlib import Path
 from pysam import VariantFile
 from design_matrix import DesignMatrix
@@ -136,7 +136,6 @@ class Pipeline(object):
             dict: A dictionary of samples, with each sample corresponding to a
                 dictionary of gene: variant pairs
         """
-        sample_gene_d = defaultdict(lambda: defaultdict(list))
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
             score = utils.refactor_EA(rec.info['EA'])
@@ -174,15 +173,13 @@ class Pipeline(object):
                                 self.matrix.update(
                                     utils.neg_pAFF(ea, zygo),
                                     '_'.join([g, hyp]), sample)
-        return sample_gene_d
 
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
         for contig in range(1, 23):
             print('Processing chromosome {}...'.format(contig))
-            sample_gene_d = self.process_contig(vcf, contig=str(contig))
-            utils.update_matrix(self.matrix, sample_gene_d)
+            self.process_contig(vcf, contig=str(contig))
         self.matrix.X = 1 - self.matrix.X
         utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
                          self.expdir / 'design_matrix.arff')
