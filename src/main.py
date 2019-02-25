@@ -9,7 +9,6 @@ Created on 1/21/19
 Main script for EA-ML pipeline.
 
 TODO:
-    * convert process_vcf to multiprocessing
     * convert Weka method to incorporate multi-run experiments
     * add batching for Weka experiments
     * add check for existing .arff matrix
@@ -27,19 +26,21 @@ from sklearn.model_selection import StratifiedKFold
 from weka.core.converters import Loader
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
-load_dotenv()
+import time
+import datetime
+load_dotenv(Path('.') / '.env')
 
 
 class Pipeline(object):
     """
     Attributes:
         expdir (Path): filepath to experiment folder
-        resultsdir (Path): filepath to results folder
+        resultsdir (Path): filepath to results summary folder
         arff_dir (Path): filepath to folder for storing temporary .arff files
         data (str): filepath to VCF file
         tabix (str): filepath to index file for VCF
-        samples (pd.DataFrame): Table of samples with corresponding disease
-            status
+        targets (np.ndarray): Array of target labels for training/prediction
+        samples (list): List of samples to test
         test_genes (list): list of genes to test
         result_df (pd.DataFrame): The DataFrame that stores experiment results
         matrix (DesignMatrix): Object for containing feature information for
@@ -54,6 +55,8 @@ class Pipeline(object):
         self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
         self.arff_dir = self.expdir / 'arffs'
+        if not os.path.exists(self.expdir):
+            os.mkdir(self.expdir)
         if not os.path.exists(self.arff_dir):
             os.mkdir(self.arff_dir)
         if not os.path.exists(self.resultsdir):
@@ -66,15 +69,19 @@ class Pipeline(object):
             print('Unable to use multiprocessing for VCF parsing without '
                   'index file.')
         # get feature and sample info
-        self.samples = pd.read_csv(os.getenv("SAMPLES"), header=None)
-        self.samples.sort_values(by=0, inplace=True)
-        self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None))
+        sample_df = pd.read_csv(os.getenv("SAMPLES"), header=None,
+                                dtype={0: str, 1: int})
+        sample_df.sort_values(by=0, inplace=True)
+        self.targets = np.array(sample_df[1])
+        self.samples = list(sample_df[0])
+        self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None,
+                                           squeeze=True))
         self._ft_labels = self.convert_genes_to_hyp()
         self.result_df = None
         # initialize feature matrix
-        matrix = np.ones((len(self.samples), len(self._ft_labels) + 1))
-        self.matrix = DesignMatrix(matrix, self.samples[1], self._ft_labels,
-                                   self.samples[0])
+        matrix = np.ones((len(self.samples), len(self._ft_labels)))
+        self.matrix = DesignMatrix(matrix, self.targets, self._ft_labels,
+                                   self.samples)
         # map classifiers to hyperparameters
         classifiers = [
             'weka.classifiers.rules.PART',
@@ -84,7 +91,7 @@ class Pipeline(object):
             'weka.classifiers.bayes.NaiveBayes',
             'weka.classifiers.functions.Logistic',
             'weka.classifiers.meta.AdaBoostM1',
-            'weka.classifiers.functions.MultiLayerPerceptron',
+            'weka.classifiers.functions.MultilayerPerceptron',
             'weka.classifiers.lazy.IBk'
         ]
         params = [
@@ -99,8 +106,7 @@ class Pipeline(object):
             ['-L', '0.3', '-M', '0.2', '-N', '500', '-V', '0', '-S', '0', '-E',
              '20', '-H', 'a'],
             ['-K', '3', '-W', '0', '-A',
-             'weka.core.neighboursearch.LinearNNSearch', '-A',
-             'weka.core.EuclideanDistance', '-R', 'first-last']
+             'weka.core.neighboursearch.LinearNNSearch']
         ]
         self.classifiers = dict(zip(classifiers, params))
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
@@ -161,8 +167,9 @@ class Pipeline(object):
             for sample in self.samples:
                 try:
                     gt = rec.samples[sample]['GT']
-                except KeyError:
-                    raise KeyError("Sample ID doesn't exists in VCF.")
+                except (IndexError, KeyError):
+                    raise KeyError("Sample ID {} doesn't exists in "
+                                   "VCF.".format(sample))
                 zygo = utils.convert_zygo(gt)
                 if zygo == 0:
                     continue
@@ -177,7 +184,7 @@ class Pipeline(object):
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
-        for contig in range(1, 23):
+        for contig in list(range(1, 23)) + ['X', 'Y']:
             print('Processing chromosome {}...'.format(contig))
             self.process_contig(vcf, contig=str(contig))
         self.matrix.X = 1 - self.matrix.X
@@ -188,15 +195,15 @@ class Pipeline(object):
         """Splits the DesignMatrix K times for each gene."""
         kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
         folds = kf.split(self.matrix.X, self.matrix.y)
-        for gene in self.test_genes:
-            hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
-            split = self.matrix.get_gene(gene, hyps=hyps)
-            ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
-            for i, train, test in enumerate(folds):
+        hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
+        for i, (train, test) in enumerate(folds):
+            for gene in self.test_genes:
+                split = self.matrix.get_gene(gene, hyps=hyps)
+                ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
                 Xtrain = split.X[train, :]
-                ytrain = split.y[train, :]
+                ytrain = split.y[train]
                 Xtest = split.X[test, :]
-                ytest = split.y[test, :]
+                ytest = split.y[test]
                 utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
                     '{}_{}-train.arff'.format(gene, i)))
                 utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
@@ -211,20 +218,27 @@ class Pipeline(object):
         """
         jvm.start()
         gene_result_d = defaultdict(lambda: defaultdict(list))
-        for gene in self.test_genes:
+        for x, gene in enumerate(self.test_genes):
+            if x % 1000 == 0:
+                print('{} / {}'.format(x, len(self.test_genes)))
             for i in range(10):
                 train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
                 test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
                 loader = Loader(classname='weka.core.converters.ArffLoader')
                 train = loader.load_file(train)
+                train.class_is_last()
                 test = loader.load_file(test)
+                test.class_is_last()
                 for clf_str, opts in self.classifiers.items():
                     clf = Classifier(classname=clf_str, options=opts)
                     clf.build_classifier(train)
-                    evl = Evaluation(test)
+                    evl = Evaluation(train)
                     _ = evl.test_model(clf, test)
                     mcc = evl.matthews_correlation_coefficient(1)
+                    if np.isnan(mcc):
+                        mcc = 0
                     gene_result_d[gene][clf_str].append(mcc)
+        print('{0} / {0}'.format(len(self.test_genes)))
         jvm.stop()
         clf_remap = {
             'weka.classifiers.rules.PART': 'PART',
@@ -234,8 +248,8 @@ class Pipeline(object):
             'weka.classifiers.bayes.NaiveBayes': 'NaiveBayes',
             'weka.classifiers.functions.Logistic': 'LogisticR',
             'weka.classifiers.meta.AdaBoostM1': 'Adaboost',
-            'weka.classifiers.functions.MultiLayerPerceptron':
-                'MultiLayerPerceptron',
+            'weka.classifiers.functions.MultilayerPerceptron':
+                'MultilayerPerceptron',
             'weka.classifiers.lazy.IBk': 'kNN'
         }
         genes = list(gene_result_d.keys())
@@ -245,8 +259,8 @@ class Pipeline(object):
         df = pd.DataFrame(list(fold for clf in gene_result_d.values() for
                                fold in clf.values()), index=idx)
         df.rename(index=clf_remap, inplace=True)
-        df['Mean'] = df.mean(axis=1)
-        df.to_csv('gene_MCC_summary.csv')
+        df['meanMCC'] = df.mean(axis=1)
+        df.to_csv(self.resultsdir / 'gene_MCC_summary.csv')
         self.result_df = df
 
     def write_results(self):
@@ -278,8 +292,9 @@ def main():
     pipeline = Pipeline()
     pipeline.process_vcf()
     print('Feature matrix loaded.')
+    print('Splitting matrix by gene...')
     pipeline.split_matrix()
-    print('Matrix split by gene.')
+    print('Matrix split complete.')
     print('Running experiment...')
     pipeline.run_weka()
     pipeline.write_results()
@@ -288,4 +303,8 @@ def main():
 
 
 if __name__ == '__main__':
+    start = time.time()
     main()
+    end = time.time()
+    elapsed = str(datetime.timedelta(seconds=end-start))
+    print('Time elapsed: {}'.format(elapsed))

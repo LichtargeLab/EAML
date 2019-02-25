@@ -44,7 +44,7 @@ def check_hyp(zygo, EA, hyp):
     hyp = re.split(r'(\d+)', hyp)
     if hyp[0] == 'R' and zygo != 2:
         return False
-    if EA >= hyp[1]:
+    if EA >= float(hyp[1]):
         return True
 
 
@@ -77,19 +77,14 @@ def write_arff(X, y, ft_labels, output):
         ft_labels (list): The label for each feature
         output (str/Path): The filepath for the output
     """
-    attrs = []
-    examples = []
-    attrs.append(['@relation '
-                  '{}'.format(str(output).split('/')[-1].split('.')[0])])
-    for ft in ft_labels:
-        attrs.append(['@attribute {} REAL'.format(ft)])
-    attrs.append(['@data'])
-    for i, row in X:
-        example = [str(x) for x in row]
-        example.append(str(y[i]))
-        examples.append(example)
-    attrs.append(['@attribute class {0,1}'])
     with open(output, 'w') as f:
-        writer = csv.writer(f, lineterminator='\n')
-        rows = attrs + examples
-        writer.writerows(rows)
+        f.write('@relation '
+                '{}\n'.format(str(output).split('/')[-1].split('.')[0]))
+        for ft in ft_labels:
+            f.write('@attribute {} REAL\n'.format(ft))
+        f.write('@attribute class {0,1}\n')
+        f.write('@data\n')
+        for i, row in enumerate(X):
+            example = [str(x) for x in row]
+            example.append(str(y[i]))
+            f.write(','.join(example) + '\n')

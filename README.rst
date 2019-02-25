@@ -22,7 +22,7 @@ dependencies.
 To run the pipeline from start to finish::
     cd <experiment folder>
     chmod +x pyEA-ML/run.sh
-    pyEA-ML/run.sh -e <experiment folder> -d <data> -s <sample file> -g <gene list>
+    pyEA-ML/run.sh -e <experiment_folder> -d <data> -s <sample_file> -g <gene_list>
 
 If a .env file already exists within your experiment folder, no input arguments
 are necessary as long as you run from the experiment folder.

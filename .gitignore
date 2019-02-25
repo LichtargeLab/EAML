@@ -10,7 +10,7 @@ __pycache__/
 .DS_Store
 
 # Results Folders
-*/results/
+/results/
 
 # Distribution / packaging
 .Python

@@ -52,12 +52,10 @@ class DesignMatrix(object):
         if hyps:
             col_names = ['_'.join([gene, hyp]) for hyp in hyps]
             col_idxs = [self._ft_map[ft] for ft in col_names]
-            col_idxs.append(self.X.shape[1] - 1)
             return DesignMatrix(self.X[:, col_idxs], self.y,
-                                self._feature_labels[:, col_idxs],
+                                [self._feature_labels[idx] for idx in col_idxs],
                                 self._id_labels)
         else:
             idx = self._ft_map[gene]
-            idx = [idx, self.X.shape[1] - 1]
             return DesignMatrix(self.X[:, idx], self.y,
-                                self._feature_labels[:, idx], self._id_labels)
+                                self._feature_labels[idx], self._id_labels)

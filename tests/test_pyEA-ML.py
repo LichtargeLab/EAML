@@ -22,10 +22,9 @@ class TestPipeline(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_000_something(self):
+    def test_classifiers(self):
         pass
 
 
 if __name__ == '__main__':
-    import sys
-    sys.exit(unittest.main())
+    unittest.main()

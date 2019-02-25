@@ -53,10 +53,10 @@ if [ ! -f ./.env ]; then
     shift $((OPTIND -1))
     cd ${EXPDIR}
     touch .env
-    dotenv -f .env set EXPDIR $OPTARG
-    dotenv -f .env set DATA $OPTARG
-    dotenv -f .env set SAMPLES $OPTARG
-    dotenv -f .env set GENELIST $OPTARG
+    dotenv -f .env set EXPDIR $EXPDIR
+    dotenv -f .env set DATA $DATA
+    dotenv -f .env set SAMPLES $SAMPLES
+    dotenv -f .env set GENELIST $GENELIST
 fi
 
 # run pipeline
