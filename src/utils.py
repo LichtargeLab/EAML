@@ -7,7 +7,6 @@ Created on 2019-01-28
 @author: dillonshapiro
 """
 import re
-import csv
 
 
 def refactor_EA(EA):
@@ -19,6 +18,8 @@ def refactor_EA(EA):
 
     Returns:
         list: The new list of scores, refactored as float or None.
+
+    Note: EA must be string type, otherwise regex search will raise an error.
     """
     newEA = []
     for score in EA:
@@ -39,13 +40,12 @@ def neg_pAFF(EA, zygo):
 
 
 def check_hyp(zygo, EA, hyp):
-    if zygo == 0:
+    if zygo == 0:  # ignore wildtype variants
         return False
     hyp = re.split(r'(\d+)', hyp)
     if hyp[0] == 'R' and zygo != 2:
         return False
-    if EA >= float(hyp[1]):
-        return True
+    return float(EA) >= float(hyp[1])
 
 
 def convert_zygo(genotype):

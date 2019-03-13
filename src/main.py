@@ -14,6 +14,7 @@ TODO:
     * add check for existing .arff matrix
 """
 import os
+import shutil
 import utils
 import pandas as pd
 import numpy as np
@@ -150,20 +151,20 @@ class Pipeline(object):
             # check for overlapping transcripts
             if isinstance(gene, tuple):
                 if len(gene) == len(score):
-                    g_ea_match = zip(gene, score)
+                    g_ea_zip = zip(gene, score)
                 elif len(score) == 1:
-                    g_ea_match = zip(gene, score * len(gene))
+                    g_ea_zip = zip(gene, score * len(gene))
                 else:
                     raise ValueError("Length of EA tuple doesn't match "
                                      "expected sizes.")
-                g_ea_match = [(g, ea) for g, ea in g_ea_match if g in
+                g_ea_match = [(g, ea) for g, ea in g_ea_zip if g in
                               self.test_genes]
                 if not g_ea_match:
                     continue
             else:
                 if gene not in self.test_genes:
                     continue
-                g_ea_match = zip([gene] * len(score), score)
+                g_ea_match = list(zip([gene] * len(score), score))
             for sample in self.samples:
                 try:
                     gt = rec.samples[sample]['GT']
@@ -285,7 +286,7 @@ class Pipeline(object):
         Cleans up all of the .arff files subsetted for each gene. These
         aren't needed since the original matrix contains all information.
         """
-        pass
+        shutil.rmtree(self.arff_dir)
 
 
 def main():
