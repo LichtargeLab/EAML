@@ -72,9 +72,8 @@ extra information is required:
 Software Requirements
 ----------------------
 
-* Java SE Development Kit 8 (version 181_b13 or higher)
 * Anaconda3
-* Python 3.6.8
+* Python 3.7.2
 
 Credits
 ----------------------
