@@ -281,13 +281,6 @@ class Pipeline(object):
         final_df.sort_values('maxMCC', ascending=False)
         final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
 
-    def cleanup(self):
-        """
-        Cleans up all of the .arff files subsetted for each gene. These
-        aren't needed since the original matrix contains all information.
-        """
-        shutil.rmtree(self.arff_dir)
-
 
 def main():
     pipeline = Pipeline()
@@ -299,7 +292,7 @@ def main():
     print('Running experiment...')
     pipeline.run_weka()
     pipeline.write_results()
-    pipeline.cleanup()
+    shutil.rmtree(pipeline.arff_dir)  # removes subsetted matrices
     print('Gene scoring completed. Analysis summary in RESULTS/ directory.')
 
 
