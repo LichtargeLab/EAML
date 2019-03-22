@@ -75,8 +75,8 @@ class Pipeline(object):
         sample_df.sort_values(by=0, inplace=True)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = list(pd.read_csv(os.getenv("GENELIST"), header=None,
-                                           squeeze=True))
+        self.test_genes = sorted(list(pd.read_csv(os.getenv("GENELIST"),
+                                                  header=None, squeeze=True)))
         self._ft_labels = self.convert_genes_to_hyp()
         self.result_df = None
         # initialize feature matrix
@@ -151,9 +151,9 @@ class Pipeline(object):
             # check for overlapping transcripts
             if isinstance(gene, tuple):
                 if len(gene) == len(score):
-                    g_ea_zip = zip(gene, score)
+                    g_ea_zip = list(zip(gene, score))
                 elif len(score) == 1:
-                    g_ea_zip = zip(gene, score * len(gene))
+                    g_ea_zip = list(zip(gene, score * len(gene)))
                 else:
                     raise ValueError("Length of EA tuple doesn't match "
                                      "expected sizes.")
