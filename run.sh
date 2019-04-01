@@ -38,13 +38,15 @@ if [ ! -f ./.env ]; then
         case ${opt} in
             h)
                 echo "Usage:"
-                echo "./run.sh -e <experiment folder> -d <data> -s <sample file> -g <gene list>"
+                echo "./run.sh -e <experiment_folder> -d <data> -s
+                      <sample_file> -g <gene_list> -n <nb_cores"
                 echo "./run.sh -h           Display this help message."
                 exit 0;;
             e) EXPDIR=$OPTARG;;
             d) DATA=$OPTARG;;
             s) SAMPLES=$OPTARG;;
             g) GENELIST=$OPTARG;;
+            n) CORES=$OPTARG;;
             \?)
                 echo "Invalid Option: -$OPTARG" 1>&2
                 exit 1;;
@@ -57,6 +59,7 @@ if [ ! -f ./.env ]; then
     dotenv -f .env set DATA $DATA
     dotenv -f .env set SAMPLES $SAMPLES
     dotenv -f .env set GENELIST $GENELIST
+    dotenv -f .env set CORES $CORES
 fi
 
 # run pipeline

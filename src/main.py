@@ -10,14 +10,18 @@ Main script for EA-ML pipeline.
 
 TODO:
     * convert Weka method to incorporate multi-run experiments
-    * add batching for Weka experiments
     * add check for existing .arff matrix
+    * add option to delete main matrix
+    * clean up functions
+    * fix bug with appending of JVM classpaths
 """
 import os
 import shutil
 import utils
+from itertools import product
 import pandas as pd
 import numpy as np
+from multiprocessing import Pool
 from collections import defaultdict, OrderedDict
 from pathlib import Path
 from pysam import VariantFile
@@ -53,6 +57,7 @@ class Pipeline(object):
     """
     def __init__(self):
         # Import env information
+        self.nb_cores = int(os.getenv("CORES"))
         self.expdir = Path(os.getenv("EXPDIR"))
         self.resultsdir = self.expdir / 'RESULTS'
         self.arff_dir = self.expdir / 'arffs'
@@ -192,23 +197,58 @@ class Pipeline(object):
         utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
                          self.expdir / 'design_matrix.arff')
 
+    def _split_worker(self, args):
+        """Worker process for generating a gene's feature matrix split"""
+        try:
+            gene, (fold, (train_idx, test_idx)) = args
+        except ValueError:
+            raise ValueError('Not enough arguments in args tuple '
+                             'for worker process to unpack.')
+        hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
+        split = self.matrix.get_gene(gene, hyps=hyps)
+        ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
+        Xtrain = split.X[train_idx, :]
+        ytrain = split.y[train_idx]
+        Xtest = split.X[test_idx, :]
+        ytest = split.y[test_idx]
+        utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
+            '{}_{}-train.arff'.format(gene, fold)))
+        utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
+            '{}_{}-test.arff'.format(gene, fold)))
+
     def split_matrix(self):
         """Splits the DesignMatrix K times for each gene."""
         kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-        folds = kf.split(self.matrix.X, self.matrix.y)
-        hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
-        for i, (train, test) in enumerate(folds):
-            for gene in self.test_genes:
-                split = self.matrix.get_gene(gene, hyps=hyps)
-                ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
-                Xtrain = split.X[train, :]
-                ytrain = split.y[train]
-                Xtest = split.X[test, :]
-                ytest = split.y[test]
-                utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
-                    '{}_{}-train.arff'.format(gene, i)))
-                utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
-                    '{}_{}-test.arff'.format(gene, i)))
+        folds = list(enumerate(kf.split(self.matrix.X, self.matrix.y)))
+        args = list(product(self.test_genes, folds))
+        pool = Pool(processes=self.nb_cores)
+        pool.map(self._split_worker, args, chunksize=len(args)//self.nb_cores)
+        pool.close()
+        pool.join()
+
+    def _weka_worker(self, gene):
+        """Worker process for Weka experiments"""
+        jvm.start(max_heap_size='2048m')
+        result_d = defaultdict(list)
+        for i in range(10):
+            train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
+            test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
+            loader = Loader(classname='weka.core.converters.ArffLoader')
+            train = loader.load_file(train)
+            train.class_is_last()
+            test = loader.load_file(test)
+            test.class_is_last()
+            for clf_str, opts in self.classifiers.items():
+                clf = Classifier(classname=clf_str, options=opts)
+                clf.build_classifier(train)
+                evl = Evaluation(train)
+                _ = evl.test_model(clf, test)
+                mcc = evl.matthews_correlation_coefficient(1)
+                if np.isnan(mcc):
+                    mcc = 0
+                result_d[clf_str].append(mcc)
+        jvm.stop()
+        return gene, result_d
 
     def run_weka(self):
         """
@@ -217,30 +257,14 @@ class Pipeline(object):
         evaluating the model on the test set and outputting the MCC to a
         dictionary.
         """
-        jvm.start()
-        gene_result_d = defaultdict(lambda: defaultdict(list))
-        for x, gene in enumerate(self.test_genes):
-            if x % 1000 == 0:
-                print('{} / {}'.format(x, len(self.test_genes)))
-            for i in range(10):
-                train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
-                test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
-                loader = Loader(classname='weka.core.converters.ArffLoader')
-                train = loader.load_file(train)
-                train.class_is_last()
-                test = loader.load_file(test)
-                test.class_is_last()
-                for clf_str, opts in self.classifiers.items():
-                    clf = Classifier(classname=clf_str, options=opts)
-                    clf.build_classifier(train)
-                    evl = Evaluation(train)
-                    _ = evl.test_model(clf, test)
-                    mcc = evl.matthews_correlation_coefficient(1)
-                    if np.isnan(mcc):
-                        mcc = 0
-                    gene_result_d[gene][clf_str].append(mcc)
-        print('{0} / {0}'.format(len(self.test_genes)))
-        jvm.stop()
+        pool = Pool(processes=self.nb_cores)
+        gene_result_d = dict(
+            pool.map(self._weka_worker, self.test_genes,
+                     chunksize=len(self.test_genes)//self.nb_cores)
+        )
+        pool.close()
+        pool.join()
+
         clf_remap = {
             'weka.classifiers.rules.PART': 'PART',
             'weka.classifiers.rules.JRip': 'JRip',
@@ -253,9 +277,8 @@ class Pipeline(object):
                 'MultilayerPerceptron',
             'weka.classifiers.lazy.IBk': 'kNN'
         }
-        genes = list(gene_result_d.keys())
-        clfs = list(gene_result_d[genes[0]].keys())
-        idx = [(gene, clf) for gene in genes for clf in clfs]
+        idx = [(gene, clf) for gene in self.test_genes
+               for clf in self.classifiers.keys()]
         idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
         df = pd.DataFrame(list(fold for clf in gene_result_d.values() for
                                fold in clf.values()), index=idx)
