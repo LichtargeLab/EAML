@@ -270,10 +270,9 @@ class Pipeline(object):
         dictionary.
         """
         jvm.add_bundled_jars()
-        pool = Pool(self.nb_cores, _init_worker)
+        pool = Pool(self.nb_cores, _init_worker, maxtasksperchild=1)
         try:
-            results = pool.map(self._weka_worker, self.test_genes,
-                               chunksize=len(self.test_genes)//self.nb_cores)
+            results = pool.map(self._weka_worker, self.test_genes, chunksize=1)
             pool.close()
             pool.join()
         except KeyboardInterrupt:
@@ -329,10 +328,10 @@ def _init_worker():
 
 def main():
     pipeline = Pipeline()
-    pipeline.process_vcf()
+    #pipeline.process_vcf()
     print('Feature matrix loaded.')
     print('Splitting matrix by gene...')
-    pipeline.split_matrix()
+    #pipeline.split_matrix()
     print('Matrix split complete.')
     print('Running experiment...')
     pipeline.run_weka()
