@@ -36,12 +36,12 @@ export PATH=${JAVA_HOME}/bin:$PATH
 if [ ! -f ./.env ]; then
     # Make the file
     # Record the results folder destination
-    while getopts ":he:d:s:g:" opt; do
+    while getopts ":he:d:s:g:n:" opt; do
         case ${opt} in
             h)
                 echo "Usage:"
                 echo "./run.sh -e <experiment_folder> -d <data> -s
-                      <sample_file> -g <gene_list> -n <nb_cores"
+                      <sample_file> -g <gene_list> -n <nb_cores>"
                 echo "./run.sh -h           Display this help message."
                 exit 0;;
             e) EXPDIR=$OPTARG;;
