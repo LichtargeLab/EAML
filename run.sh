@@ -29,6 +29,8 @@ else
     conda env create -f ${repSource}/environment.yml
     source activate ${ENV_NAME}
 fi
+export JAVA_HOME=${CONDA_PREFIX}/jre
+export PATH=${JAVA_HOME}/bin:$PATH
 
 # Set-up .env
 if [ ! -f ./.env ]; then
@@ -55,11 +57,11 @@ if [ ! -f ./.env ]; then
     shift $((OPTIND -1))
     cd ${EXPDIR}
     touch .env
-    dotenv -f .env set EXPDIR $EXPDIR
-    dotenv -f .env set DATA $DATA
-    dotenv -f .env set SAMPLES $SAMPLES
-    dotenv -f .env set GENELIST $GENELIST
-    dotenv -f .env set CORES $CORES
+    dotenv -f .env set EXPDIR ${EXPDIR}
+    dotenv -f .env set DATA ${DATA}
+    dotenv -f .env set SAMPLES ${SAMPLES}
+    dotenv -f .env set GENELIST ${GENELIST}
+    dotenv -f .env set CORES ${CORES}
 fi
 
 # run pipeline
