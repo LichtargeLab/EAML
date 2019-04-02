@@ -329,7 +329,7 @@ def _init_worker():
 
 def main():
     pipeline = Pipeline()
-    #pipeline.process_vcf()
+    pipeline.process_vcf()
     print('Feature matrix loaded.')
     print('Splitting matrix by gene...')
     pipeline.split_matrix()
