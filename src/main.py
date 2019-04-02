@@ -12,12 +12,13 @@ TODO:
     * convert Weka method to incorporate multi-run experiments
     * add check for existing .arff matrix
     * add option to delete main matrix
-    * clean up functions
-    * fix bug with appending of JVM classpaths
+    * fix issue with dead processes
 """
 import os
 import shutil
+import sys
 import utils
+import signal
 from itertools import product
 import pandas as pd
 import numpy as np
@@ -74,6 +75,7 @@ class Pipeline(object):
             self.tabix = None
             print('Unable to use multiprocessing for VCF parsing without '
                   'index file.')
+
         # get feature and sample info
         sample_df = pd.read_csv(os.getenv("SAMPLES"), header=None,
                                 dtype={0: str, 1: int})
@@ -83,11 +85,13 @@ class Pipeline(object):
         self.test_genes = sorted(list(pd.read_csv(os.getenv("GENELIST"),
                                                   header=None, squeeze=True)))
         self._ft_labels = self.convert_genes_to_hyp()
-        self.result_df = None
+
         # initialize feature matrix
         matrix = np.ones((len(self.samples), len(self._ft_labels)))
         self.matrix = DesignMatrix(matrix, self.targets, self._ft_labels,
                                    self.samples)
+        self.result_df = None
+
         # map classifiers to hyperparameters
         classifiers = [
             'weka.classifiers.rules.PART',
@@ -170,6 +174,7 @@ class Pipeline(object):
                 if gene not in self.test_genes:
                     continue
                 g_ea_match = list(zip([gene] * len(score), score))
+            # check genotypes and update matrix
             for sample in self.samples:
                 try:
                     gt = rec.samples[sample]['GT']
@@ -181,7 +186,7 @@ class Pipeline(object):
                     continue
                 for g, ea in g_ea_match:
                     if ea is not None:
-                        for hyp in ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']:
+                        for hyp in self.hypotheses:
                             if utils.check_hyp(zygo, ea, hyp):
                                 self.matrix.update(
                                     utils.neg_pAFF(ea, zygo),
@@ -221,14 +226,21 @@ class Pipeline(object):
         kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
         folds = list(enumerate(kf.split(self.matrix.X, self.matrix.y)))
         args = list(product(self.test_genes, folds))
-        pool = Pool(processes=self.nb_cores)
-        pool.map(self._split_worker, args, chunksize=len(args)//self.nb_cores)
-        pool.close()
-        pool.join()
+        pool = Pool(self.nb_cores, _init_worker)
+        try:
+            pool.map(self._split_worker, args,
+                     chunksize=len(args)//self.nb_cores)
+            pool.close()
+            pool.join()
+        except KeyboardInterrupt:
+            print('Caught KeyboardInterrupt, terminating workers')
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
 
     def _weka_worker(self, gene):
         """Worker process for Weka experiments"""
-        jvm.start(max_heap_size='2048m')
+        jvm.start(bundled=False)
         result_d = defaultdict(list)
         for i in range(10):
             train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
@@ -257,13 +269,19 @@ class Pipeline(object):
         evaluating the model on the test set and outputting the MCC to a
         dictionary.
         """
-        pool = Pool(processes=self.nb_cores)
-        gene_result_d = dict(
-            pool.map(self._weka_worker, self.test_genes,
-                     chunksize=len(self.test_genes)//self.nb_cores)
-        )
-        pool.close()
-        pool.join()
+        jvm.add_bundled_jars()
+        pool = Pool(self.nb_cores, _init_worker)
+        try:
+            results = pool.map(self._weka_worker, self.test_genes,
+                               chunksize=len(self.test_genes)//self.nb_cores)
+            pool.close()
+            pool.join()
+        except KeyboardInterrupt:
+            print('Caught KeyboardInterrupt, terminating workers')
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
+        gene_result_d = dict(results)
 
         clf_remap = {
             'weka.classifiers.rules.PART': 'PART',
@@ -305,9 +323,13 @@ class Pipeline(object):
         final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
 
 
+def _init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 def main():
     pipeline = Pipeline()
-    pipeline.process_vcf()
+    #pipeline.process_vcf()
     print('Feature matrix loaded.')
     print('Splitting matrix by gene...')
     pipeline.split_matrix()
