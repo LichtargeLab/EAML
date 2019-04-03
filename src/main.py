@@ -11,8 +11,7 @@ Main script for EA-ML pipeline.
 TODO:
     * convert Weka method to incorporate multi-run experiments
     * add check for existing .arff matrix
-    * add option to delete main matrix
-    * fix issue with dead processes
+    * switch to arff gene-split method to direct numpy-split-arff conversion
 """
 import os
 import shutil
@@ -54,7 +53,6 @@ class Pipeline(object):
         classifiers (list): A list of tuples that maps classifiers from Weka to
             their hyperparameters.
         hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
-
     """
     def __init__(self):
         # Import env information
@@ -93,32 +91,11 @@ class Pipeline(object):
         self.result_df = None
 
         # map classifiers to hyperparameters
-        classifiers = [
-            'weka.classifiers.rules.PART',
-            'weka.classifiers.rules.JRip',
-            'weka.classifiers.trees.J48',
-            'weka.classifiers.trees.RandomForest',
-            'weka.classifiers.bayes.NaiveBayes',
-            'weka.classifiers.functions.Logistic',
-            'weka.classifiers.meta.AdaBoostM1',
-            'weka.classifiers.functions.MultilayerPerceptron',
-            'weka.classifiers.lazy.IBk'
-        ]
-        params = [
-            ['-M', '5', '-C', '0.25', '-Q', '1'],
-            ['-F', '3', '-N', '2.0', '-O', '2', '-S', '1', '-P'],
-            ['-C', '0.25', '-M', '5'],
-            ['-I', '10', '-K', '0', '-S', '1'],
-            [''],
-            ['-R', '1.0E-8', '-M', '-1'],
-            ['-P', '100', '-S', '1', '-I', '10', '-W',
-             'weka.classifiers.trees.DecisionStump'],
-            ['-L', '0.3', '-M', '0.2', '-N', '500', '-V', '0', '-S', '0', '-E',
-             '20', '-H', 'a'],
-            ['-K', '3', '-W', '0', '-A',
-             'weka.core.neighboursearch.LinearNNSearch']
-        ]
-        self.classifiers = dict(zip(classifiers, params))
+        pipe_path = os.path.dirname(sys.argv[0])
+        self.clf_info = pd.read_csv(pipe_path + '/../classifiers.csv')
+        clfs = list(self.clf_info['call_string'])
+        params = pd.eval(self.clf_info['options'])
+        self.classifiers = dict(zip(clfs, params))
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
     def convert_genes_to_hyp(self):
@@ -238,29 +215,30 @@ class Pipeline(object):
             pool.join()
             sys.exit(1)
 
-    def _weka_worker(self, gene):
+    def _weka_worker(self, chunk):
         """Worker process for Weka experiments"""
         jvm.start(bundled=False)
-        result_d = defaultdict(list)
-        for i in range(10):
-            train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
-            test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
-            loader = Loader(classname='weka.core.converters.ArffLoader')
-            train = loader.load_file(train)
-            train.class_is_last()
-            test = loader.load_file(test)
-            test.class_is_last()
-            for clf_str, opts in self.classifiers.items():
-                clf = Classifier(classname=clf_str, options=opts)
-                clf.build_classifier(train)
-                evl = Evaluation(train)
-                _ = evl.test_model(clf, test)
-                mcc = evl.matthews_correlation_coefficient(1)
-                if np.isnan(mcc):
-                    mcc = 0
-                result_d[clf_str].append(mcc)
+        result_d = defaultdict(lambda: defaultdict(list))
+        for gene in chunk:
+            for i in range(10):
+                train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
+                test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
+                loader = Loader(classname='weka.core.converters.ArffLoader')
+                train = loader.load_file(train)
+                train.class_is_last()
+                test = loader.load_file(test)
+                test.class_is_last()
+                for clf_str, opts in self.classifiers.items():
+                    clf = Classifier(classname=clf_str, options=opts)
+                    clf.build_classifier(train)
+                    evl = Evaluation(train)
+                    _ = evl.test_model(clf, test)
+                    mcc = evl.matthews_correlation_coefficient(1)
+                    if np.isnan(mcc):
+                        mcc = 0
+                    result_d[gene][clf_str].append(mcc)
         jvm.stop()
-        return gene, result_d
+        return result_d
 
     def run_weka(self):
         """
@@ -269,31 +247,28 @@ class Pipeline(object):
         evaluating the model on the test set and outputting the MCC to a
         dictionary.
         """
+        gene_result_d = {}
         jvm.add_bundled_jars()
+        chunks = np.array_split(np.array(self.test_genes), self.nb_cores)
         pool = Pool(self.nb_cores, _init_worker, maxtasksperchild=1)
         try:
-            results = pool.map(self._weka_worker, self.test_genes, chunksize=1)
+            results = pool.imap_unordered(self._weka_worker, chunks)
             pool.close()
+            progress = 0
+            for result in results:
+                progress += len(result.keys())
+                print('Progress: {} / {}'.format(progress,
+                                                 len(self.test_genes)))
+                gene_result_d.update(result)
             pool.join()
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers')
             pool.terminate()
             pool.join()
             sys.exit(1)
-        gene_result_d = dict(results)
 
-        clf_remap = {
-            'weka.classifiers.rules.PART': 'PART',
-            'weka.classifiers.rules.JRip': 'JRip',
-            'weka.classifiers.trees.J48': 'J48',
-            'weka.classifiers.trees.RandomForest': 'RF',
-            'weka.classifiers.bayes.NaiveBayes': 'NaiveBayes',
-            'weka.classifiers.functions.Logistic': 'LogisticR',
-            'weka.classifiers.meta.AdaBoostM1': 'Adaboost',
-            'weka.classifiers.functions.MultilayerPerceptron':
-                'MultilayerPerceptron',
-            'weka.classifiers.lazy.IBk': 'kNN'
-        }
+        clf_remap = pd.Series(self.clf_info['classifier'].values,
+                              index=self.clf_info['call_string']).to_dict()
         idx = [(gene, clf) for gene in self.test_genes
                for clf in self.classifiers.keys()]
         idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
