@@ -11,6 +11,7 @@ Main script for EA-ML pipeline.
 TODO:
     * convert Weka method to incorporate multi-run experiments
     * add check for existing .arff matrix
+    * option to write large arff matrix or not
     * switch to arff gene-split method to direct numpy-split-arff conversion
 """
 import os
@@ -40,7 +41,6 @@ class Pipeline(object):
     """
     Attributes:
         expdir (Path): filepath to experiment folder
-        resultsdir (Path): filepath to results summary folder
         arff_dir (Path): filepath to folder for storing temporary .arff files
         data (str): filepath to VCF file
         tabix (str): filepath to index file for VCF
@@ -58,15 +58,12 @@ class Pipeline(object):
         # Import env information
         self.nb_cores = int(os.getenv("CORES"))
         self.expdir = Path(os.getenv("EXPDIR"))
-        self.resultsdir = self.expdir / 'RESULTS'
+        self.data = os.getenv("DATA")
         self.arff_dir = self.expdir / 'arffs'
         if not os.path.exists(self.expdir):
             os.mkdir(self.expdir)
         if not os.path.exists(self.arff_dir):
             os.mkdir(self.arff_dir)
-        if not os.path.exists(self.resultsdir):
-            os.mkdir(self.resultsdir)
-        self.data = os.getenv("DATA")
         if os.path.exists(self.data + '.tbi'):
             self.tabix = self.data + '.tbi'
         else:
@@ -277,7 +274,7 @@ class Pipeline(object):
                                fold in clf.values()), index=idx)
         df.rename(index=clf_remap, inplace=True)
         df['meanMCC'] = df.mean(axis=1)
-        df.to_csv(self.resultsdir / 'gene_MCC_summary.csv')
+        df.to_csv(self.expdir / 'gene_MCC_summary.csv')
         self.result_df = df
 
     def write_results(self):
@@ -287,15 +284,19 @@ class Pipeline(object):
         clf_d = OrderedDict([('gene', list(genes))])
         for clf in clfs:
             clf_df = self.result_df.xs(clf, level='classifier')
-            clf_df.to_csv(self.resultsdir / (clf + '-recap.csv'))
+            clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
             clf_d[clf] = list(clf_df['meanMCC'])
         mean_df = pd.DataFrame.from_dict(clf_d)
-        mean_df.to_csv(self.resultsdir / 'all-classifier_summary.csv',
+        mean_df.to_csv(self.expdir / 'all-classifier_summary.csv',
                        index=False)
         max_vals = mean_df.max(axis=1)
         final_df = pd.DataFrame({'gene': genes, 'maxMCC': max_vals})
         final_df.sort_values('maxMCC', ascending=False)
-        final_df.to_csv(self.resultsdir / 'maxMCC_summary.csv', index=False)
+        final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
+
+    def cleanup(self):
+        shutil.rmtree(self.arff_dir)
+        os.remove(self.expdir / 'design_matrix.arff')
 
 
 def _init_worker():
@@ -312,8 +313,8 @@ def main():
     print('Running experiment...')
     pipeline.run_weka()
     pipeline.write_results()
-    shutil.rmtree(pipeline.arff_dir)  # removes subsetted matrices
-    print('Gene scoring completed. Analysis summary in RESULTS/ directory.')
+    pipeline.cleanup()
+    print('Gene scoring completed. Analysis summary in experiment directory.')
 
 
 if __name__ == '__main__':
