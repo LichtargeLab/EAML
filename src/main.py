@@ -218,8 +218,9 @@ class Pipeline(object):
     def _weka_worker(self, chunk):
         """Worker process for Weka experiments"""
         jvm.start(bundled=False)
-        result_d = defaultdict(lambda: defaultdict(list))
+        result_d = {}
         for gene in chunk:
+            result_d[gene] = defaultdict(list)
             for i in range(10):
                 train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
                 test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
