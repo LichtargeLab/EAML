@@ -183,9 +183,8 @@ class Pipeline(object):
         except ValueError:
             raise ValueError('Not enough arguments in args tuple '
                              'for worker process to unpack.')
-        hyps = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
-        split = self.matrix.get_gene(gene, hyps=hyps)
-        ft_labels = ['_'.join([gene, hyp]) for hyp in hyps]
+        split = self.matrix.get_gene(gene, hyps=self.hypotheses)
+        ft_labels = ['_'.join([gene, hyp]) for hyp in self.hypotheses]
         Xtrain = split.X[train_idx, :]
         ytrain = split.y[train_idx]
         Xtest = split.X[test_idx, :]
@@ -203,7 +202,7 @@ class Pipeline(object):
         pool = Pool(self.nb_cores, _init_worker)
         try:
             pool.map(self._split_worker, args,
-                     chunksize=len(args)//self.nb_cores)
+                     chunksize=np.ceil(len(args)/self.nb_cores))
             pool.close()
             pool.join()
         except KeyboardInterrupt:
