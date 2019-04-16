@@ -19,7 +19,6 @@ import shutil
 import sys
 import utils
 import signal
-from itertools import product
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool
@@ -176,40 +175,22 @@ class Pipeline(object):
         utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
                          self.expdir / 'design_matrix.arff')
 
-    def _split_worker(self, args):
-        """Worker process for generating a gene's feature matrix split"""
-        try:
-            gene, (fold, (train_idx, test_idx)) = args
-        except ValueError:
-            raise ValueError('Not enough arguments in args tuple '
-                             'for worker process to unpack.')
-        split = self.matrix.get_gene(gene, hyps=self.hypotheses)
-        ft_labels = ['_'.join([gene, hyp]) for hyp in self.hypotheses]
-        Xtrain = split.X[train_idx, :]
-        ytrain = split.y[train_idx]
-        Xtest = split.X[test_idx, :]
-        ytest = split.y[test_idx]
-        utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
-            '{}_{}-train.arff'.format(gene, fold)))
-        utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
-            '{}_{}-test.arff'.format(gene, fold)))
-
     def split_matrix(self):
         """Splits the DesignMatrix K times for each gene."""
         kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-        folds = list(enumerate(kf.split(self.matrix.X, self.matrix.y)))
-        args = list(product(self.test_genes, folds))
-        pool = Pool(self.nb_cores, _init_worker)
-        try:
-            pool.map(self._split_worker, args,
-                     chunksize=np.ceil(len(args)/self.nb_cores))
-            pool.close()
-            pool.join()
-        except KeyboardInterrupt:
-            print('Caught KeyboardInterrupt, terminating workers')
-            pool.terminate()
-            pool.join()
-            sys.exit(1)
+        folds = kf.split(self.matrix.X, self.matrix.y)
+        for i, (train, test) in enumerate(folds):
+            for gene in self.test_genes:
+                split = self.matrix.get_gene(gene, hyps=self.hypotheses)
+                ft_labels = ['_'.join([gene, hyp]) for hyp in self.hypotheses]
+                Xtrain = split.X[train, :]
+                ytrain = split.y[train]
+                Xtest = split.X[test, :]
+                ytest = split.y[test]
+                utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
+                    '{}_{}-train.arff'.format(gene, i)))
+                utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
+                    '{}_{}-test.arff'.format(gene, i)))
 
     def _weka_worker(self, chunk):
         """Worker process for Weka experiments"""
@@ -249,15 +230,11 @@ class Pipeline(object):
         chunks = np.array_split(np.array(self.test_genes), self.nb_cores)
         pool = Pool(self.nb_cores, _init_worker, maxtasksperchild=1)
         try:
-            results = pool.imap_unordered(self._weka_worker, chunks)
+            results = pool.map(self._weka_worker, chunks)
             pool.close()
-            progress = 0
-            for result in results:
-                progress += len(result.keys())
-                print('Progress: {} / {}'.format(progress,
-                                                 len(self.test_genes)))
-                gene_result_d.update(result)
             pool.join()
+            for result in results:
+                gene_result_d.update(result)
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers')
             pool.terminate()
