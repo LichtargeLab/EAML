@@ -14,25 +14,24 @@ TODO:
     * option to write large arff matrix or not
     * switch to arff gene-split method to direct numpy-split-arff conversion
 """
+import datetime
 import os
 import shutil
 import sys
-import utils
-import signal
-import pandas as pd
-import numpy as np
-from multiprocessing import Pool
-from collections import defaultdict, OrderedDict
-from pathlib import Path
-from pysam import VariantFile
-from design_matrix import DesignMatrix
-from dotenv import load_dotenv
-from sklearn.model_selection import StratifiedKFold
-from weka.core.converters import Loader
-import weka.core.jvm as jvm
-from weka.classifiers import Classifier, Evaluation
 import time
-import datetime
+from collections import OrderedDict
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+from pysam import VariantFile
+from sklearn.model_selection import StratifiedKFold
+
+import utils
+from design_matrix import DesignMatrix
+from weka_wrapper import run_weka
+
 load_dotenv(Path('.') / '.env')
 
 
@@ -172,8 +171,6 @@ class Pipeline(object):
             print('Processing chromosome {}...'.format(contig))
             self.process_contig(vcf, contig=str(contig))
         self.matrix.X = 1 - self.matrix.X
-        utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
-                         self.expdir / 'design_matrix.arff')
 
     def split_matrix(self):
         """Splits the DesignMatrix K times for each gene."""
@@ -192,55 +189,9 @@ class Pipeline(object):
                 utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
                     '{}_{}-test.arff'.format(gene, i)))
 
-    def _weka_worker(self, chunk):
-        """Worker process for Weka experiments"""
-        jvm.start(bundled=False)
-        result_d = {}
-        for gene in chunk:
-            result_d[gene] = defaultdict(list)
-            for i in range(10):
-                train = str(self.arff_dir / '{}_{}-train.arff'.format(gene, i))
-                test = str(self.arff_dir / '{}_{}-test.arff'.format(gene, i))
-                loader = Loader(classname='weka.core.converters.ArffLoader')
-                train = loader.load_file(train)
-                train.class_is_last()
-                test = loader.load_file(test)
-                test.class_is_last()
-                for clf_str, opts in self.classifiers.items():
-                    clf = Classifier(classname=clf_str, options=opts)
-                    clf.build_classifier(train)
-                    evl = Evaluation(train)
-                    _ = evl.test_model(clf, test)
-                    mcc = evl.matthews_correlation_coefficient(1)
-                    if np.isnan(mcc):
-                        mcc = 0
-                    result_d[gene][clf_str].append(mcc)
-        jvm.stop()
-        return result_d
-
-    def run_weka(self):
-        """
-        The overall Weka experiment. The steps include loading the K .arff files
-        for each gene, building a new classifier based on the training set, then
-        evaluating the model on the test set and outputting the MCC to a
-        dictionary.
-        """
-        gene_result_d = {}
-        jvm.add_bundled_jars()
-        chunks = np.array_split(np.array(self.test_genes), self.nb_cores)
-        pool = Pool(self.nb_cores, _init_worker, maxtasksperchild=1)
-        try:
-            results = pool.map(self._weka_worker, chunks)
-            pool.close()
-            pool.join()
-            for result in results:
-                gene_result_d.update(result)
-        except KeyboardInterrupt:
-            print('Caught KeyboardInterrupt, terminating workers')
-            pool.terminate()
-            pool.join()
-            sys.exit(1)
-
+    def run_weka_exp(self):
+        gene_result_d = run_weka(self.test_genes, self.nb_cores, self.arff_dir,
+                                 self.classifiers)
         clf_remap = pd.Series(self.clf_info['classifier'].values,
                               index=self.clf_info['call_string']).to_dict()
         idx = [(gene, clf) for gene in self.test_genes
@@ -275,10 +226,6 @@ class Pipeline(object):
         os.remove(self.expdir / 'design_matrix.arff')
 
 
-def _init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
 def main():
     pipeline = Pipeline()
     pipeline.process_vcf()
@@ -287,7 +234,7 @@ def main():
     pipeline.split_matrix()
     print('Matrix split complete.')
     print('Running experiment...')
-    pipeline.run_weka()
+    pipeline.run_weka_exp()
     pipeline.write_results()
     pipeline.cleanup()
     print('Gene scoring completed. Analysis summary in experiment directory.')
