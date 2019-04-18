@@ -223,7 +223,6 @@ class Pipeline(object):
 
     def cleanup(self):
         shutil.rmtree(self.arff_dir)
-        os.remove(self.expdir / 'design_matrix.arff')
 
 
 def main():
