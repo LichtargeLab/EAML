@@ -168,8 +168,13 @@ class Pipeline(object):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
         for contig in list(range(1, 23)) + ['X', 'Y']:
-            print('Processing chromosome {}...'.format(contig))
-            self.process_contig(vcf, contig=str(contig))
+            try:
+                print('Processing chromosome {}...'.format(contig))
+                self.process_contig(vcf, contig=str(contig))
+            except ValueError as e:
+                if 'invalid contig' in str(e) and contig in ['X', 'Y']:
+                    print(f'No {contig} chromosome data.')
+                    continue
         self.matrix.X = 1 - self.matrix.X
 
     def split_matrix(self):
