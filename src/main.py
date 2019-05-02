@@ -119,10 +119,6 @@ class Pipeline(object):
             vcf (VariantFile): A VariantFile object
             contig (int, None): A specific contig/chromosome to fetch from the
                 VCF. If None, will iterate through the entire VCF file.
-
-        Returns:
-            dict: A dictionary of samples, with each sample corresponding to a
-                dictionary of gene: variant pairs
         """
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
