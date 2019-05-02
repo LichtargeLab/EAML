@@ -110,7 +110,8 @@ if __name__ == '__main__':
                         help='Number of shuffling runs to include in '
                              'distribution')
     args = parser.parse_args()
-    pipe_dir = Path(argv[0]).parent.expanduser().resolve()
+
+    pipe_dir = Path(argv[0]).parent.parent.expanduser().resolve()
     exp_dir = args.exp_dir.expanduser().resolve()
     labels_path = args.labels_path.expanduser().resolve()
     vcf = args.data.expanduser().resolve()
