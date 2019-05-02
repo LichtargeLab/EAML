@@ -179,7 +179,7 @@ class Pipeline(object):
 
     def split_matrix(self):
         """Splits the DesignMatrix K times for each gene."""
-        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=111)
         folds = kf.split(self.matrix.X, self.matrix.y)
         for i, (train, test) in enumerate(folds):
             for gene in self.test_genes:
