@@ -81,7 +81,7 @@ def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
         new_labels = shuffle_labels(labels_path, run_dir)
         os.chdir(run_dir)
         subprocess.call([f'{pipe_dir}/run.sh', '-e', run_dir, '-d', vcf_path,
-                         '-s', new_labels, '-g', gene_list, '-n', n_workers])
+                         '-s', new_labels, '-g', gene_list, '-n', str(n_workers)])
 
     shuffle_results = merge_runs(exp_dir, n_runs)
     rand_results = compute_zscores(preds_path, shuffle_results)
