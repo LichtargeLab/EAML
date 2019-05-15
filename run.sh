@@ -33,10 +33,10 @@ export JAVA_HOME=${CONDA_PREFIX}/jre
 export PATH=${JAVA_HOME}/bin:$PATH
 
 # Set-up .env
+SEED=111
 if [ ! -f ./.env ]; then
     # Make the file
     # Record the results folder destination
-    SEED=111
     USAGE="Usage:\n
            ./run.sh -e <experiment_folder
            -d <data>
