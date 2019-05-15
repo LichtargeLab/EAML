@@ -9,7 +9,6 @@ Created on 1/21/19
 Main script for EA-ML pipeline.
 
 TODO:
-    * convert Weka method to incorporate multi-run experiments
     * add check for existing .arff matrix
     * option to write large arff matrix or not
     * switch to arff gene-split method to direct numpy-split-arff conversion
@@ -57,6 +56,7 @@ class Pipeline(object):
         self.nb_cores = int(os.getenv("CORES"))
         self.expdir = Path(os.getenv("EXPDIR"))
         self.data = os.getenv("DATA")
+        self.seed = os.getenv("SEED")
         self.arff_dir = self.expdir / 'arffs'
         if not os.path.exists(self.expdir):
             os.mkdir(self.expdir)
@@ -160,7 +160,7 @@ class Pipeline(object):
                                     utils.neg_pAFF(ea, zygo),
                                     '_'.join([g, hyp]), sample)
 
-    def process_vcf(self):
+    def process_vcf(self, write_matrix=False):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
         for contig in list(range(1, 23)) + ['X', 'Y']:
@@ -172,10 +172,13 @@ class Pipeline(object):
                     print(f'No {contig} chromosome data.')
                     continue
         self.matrix.X = 1 - self.matrix.X
+        if write_matrix:
+            utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
+                             self.expdir / 'design_matrix.arff')
 
     def split_matrix(self):
         """Splits the DesignMatrix K times for each gene."""
-        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=111)
+        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
         folds = kf.split(self.matrix.X, self.matrix.y)
         for i, (train, test) in enumerate(folds):
             for gene in self.test_genes:

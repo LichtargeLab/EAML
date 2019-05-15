@@ -36,22 +36,30 @@ export PATH=${JAVA_HOME}/bin:$PATH
 if [ ! -f ./.env ]; then
     # Make the file
     # Record the results folder destination
-    while getopts ":he:d:s:g:n:" opt; do
+    SEED=111
+    USAGE="Usage:\n
+           ./run.sh -e <experiment_folder
+           -d <data>
+           -s <sample_file>
+           -g <gene_list>
+           -n <nb_cores>
+           -r <random_seed>\n\n
+           ./run.sh -h      Display this help message.\n"
+    while getopts ":he:d:s:g:n:r:" opt; do
         case ${opt} in
-            h)
-                echo "Usage:"
-                echo "./run.sh -e <experiment_folder> -d <data> -s
-                      <sample_file> -g <gene_list> -n <nb_cores>"
-                echo "./run.sh -h           Display this help message."
-                exit 0;;
+            h) echo ${USAGE}
+               exit 0;;
             e) EXPDIR=$OPTARG;;
             d) DATA=$OPTARG;;
             s) SAMPLES=$OPTARG;;
             g) GENELIST=$OPTARG;;
             n) CORES=$OPTARG;;
-            \?)
-                echo "Invalid Option: -$OPTARG" 1>&2
+            r) SEED=$OPTARG;;
+            \?) echo "Invalid Option: -$OPTARG" 1>&2
+                echo ${USAGE}
                 exit 1;;
+            *) echo ${USAGE}
+               exit 1;;
         esac
     done
     shift $((OPTIND -1))
@@ -62,6 +70,7 @@ if [ ! -f ./.env ]; then
     dotenv -f .env set SAMPLES ${SAMPLES}
     dotenv -f .env set GENELIST ${GENELIST}
     dotenv -f .env set CORES ${CORES}
+    dotenv -f .env set SEED ${SEED}
 fi
 
 # run pipeline
