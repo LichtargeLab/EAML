@@ -56,7 +56,7 @@ class Pipeline(object):
         self.nb_cores = int(os.getenv("CORES"))
         self.expdir = Path(os.getenv("EXPDIR"))
         self.data = os.getenv("DATA")
-        self.seed = os.getenv("SEED")
+        self.seed = int(os.getenv("SEED"))
         self.arff_dir = self.expdir / 'arffs'
         if not os.path.exists(self.expdir):
             os.mkdir(self.expdir)
