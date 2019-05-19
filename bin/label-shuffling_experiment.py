@@ -59,8 +59,8 @@ def merge_runs(exp_dir, n_runs=100):
 
 def compute_zscores(preds_path, shuffle_results):
     preds_df = pd.read_csv(preds_path).sort_values(by='gene')
-    rand_means = shuffle_results.mean()
-    rand_stds = shuffle_results.std()
+    rand_means = shuffle_results.mean(axis=1)
+    rand_stds = shuffle_results.std(axis=1)
     rand_results = pd.DataFrame({
         'gene': shuffle_results['gene'],
         'maxMCC': preds_df['maxMCC'],
