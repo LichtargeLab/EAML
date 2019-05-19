@@ -54,8 +54,7 @@ def merge_runs(exp_dir, n_runs=100):
         df.columns = ['gene', f'run{i}']
         merged_df = merged_df.merge(df, on='gene')
     merged_df.sort_values(by='gene', inplace=True)
-    merged_df.set_index('gene', inplace=True)
-    return merged_df.T
+    return merged_df
 
 
 def compute_zscores(preds_path, shuffle_results):
@@ -84,6 +83,7 @@ def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
                          '-s', new_labels, '-g', gene_list, '-n', str(n_workers)])
 
     shuffle_results = merge_runs(exp_dir, n_runs)
+    shuffle_results.to_csv(f'{exp_dir}/random_distributions.csv', index=False)
     rand_results = compute_zscores(preds_path, shuffle_results)
     rand_results.to_csv(f'{exp_dir}/randomization_results.csv', index=False)
 

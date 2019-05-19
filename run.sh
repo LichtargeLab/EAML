@@ -34,18 +34,19 @@ export PATH=${JAVA_HOME}/bin:$PATH
 
 # Set-up .env
 SEED=111
+MAF=2
 if [ ! -f ./.env ]; then
     # Make the file
     # Record the results folder destination
     USAGE="Usage:\n
-           ./run.sh -e <experiment_folder
-           -d <data>
-           -s <sample_file>
-           -g <gene_list>
-           -n <nb_cores>
+           ./run.sh -e <experiment_folder>\n
+           -d <data>\n
+           -s <sample_file>\n
+           -g <gene_list>\n
+           -n <nb_cores>\n
            -r <random_seed>\n\n
            ./run.sh -h      Display this help message.\n"
-    while getopts ":he:d:s:g:n:r:" opt; do
+    while getopts ":he:d:s:g:n:r:f:" opt; do
         case ${opt} in
             h) echo ${USAGE}
                exit 0;;
@@ -55,6 +56,7 @@ if [ ! -f ./.env ]; then
             g) GENELIST=$OPTARG;;
             n) CORES=$OPTARG;;
             r) SEED=$OPTARG;;
+            f) MAF=$OPTARG;;
             \?) echo "Invalid Option: -$OPTARG" 1>&2
                 echo ${USAGE}
                 exit 1;;
@@ -71,6 +73,7 @@ if [ ! -f ./.env ]; then
     dotenv -f .env set GENELIST ${GENELIST}
     dotenv -f .env set CORES ${CORES}
     dotenv -f .env set SEED ${SEED}
+    dotenv -f .env set MAF ${MAF}
 fi
 
 # run pipeline

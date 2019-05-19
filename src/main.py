@@ -12,6 +12,7 @@ TODO:
     * add check for existing .arff matrix
     * option to write large arff matrix or not
     * switch to arff gene-split method to direct numpy-split-arff conversion
+    * clean up option handling in run.sh
 """
 import datetime
 import os
@@ -50,12 +51,15 @@ class Pipeline(object):
         classifiers (list): A list of tuples that maps classifiers from Weka to
             their hyperparameters.
         hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
+        maf_cutoff (float): A minor allele frequency cutoff for filtering
+                variants.
     """
     def __init__(self):
         # Import env information
         self.nb_cores = int(os.getenv("CORES"))
         self.expdir = Path(os.getenv("EXPDIR"))
         self.data = os.getenv("DATA")
+        self.maf_cutoff = float(os.getenv("MAF"))
         self.seed = int(os.getenv("SEED"))
         self.arff_dir = self.expdir / 'arffs'
         if not os.path.exists(self.expdir):
@@ -117,10 +121,12 @@ class Pipeline(object):
 
         Args:
             vcf (VariantFile): A VariantFile object
-            contig (int, None): A specific contig/chromosome to fetch from the
+            contig (str): A specific contig/chromosome to fetch from the
                 VCF. If None, will iterate through the entire VCF file.
         """
         for rec in vcf.fetch(contig=contig):
+            if not (self.maf_cutoff and rec.info['MAF'] < self.maf_cutoff):
+                continue
             gene = rec.info['gene']
             score = utils.refactor_EA(rec.info['EA'])
             if not any(score):
@@ -163,6 +169,8 @@ class Pipeline(object):
     def process_vcf(self, write_matrix=False):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
+        if self.maf_cutoff and 'MAF' not in vcf.header.info.keys():
+            raise AttributeError('No MAF info field defined by header.')
         for contig in list(range(1, 23)) + ['X', 'Y']:
             try:
                 print('Processing chromosome {}...'.format(contig))
