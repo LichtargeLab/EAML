@@ -55,24 +55,24 @@ def merge_runs(exp_dir, n_runs=100):
         df = pd.read_csv(f'{exp_dir}/run{i}/maxMCC_summary.csv')
         df.columns = ['gene', f'run{i}']
         merged_df = merged_df.merge(df, on='gene')
-    merged_df.sort_values(by='gene', inplace=True)
+    merged_df.sort_values(by='gene').reset_index(drop=True, inplace=True)
+    merged_df.set_index('gene', inplace=True)
     return merged_df
 
 
 def compute_zscores(preds_path, shuffle_results):
-    preds_df = pd.read_csv(preds_path).sort_values(by='gene')
+    preds_df = pd.read_csv(preds_path, index_col='gene').sort_index()
     rand_means = shuffle_results.mean(axis=1)
     rand_stds = shuffle_results.std(axis=1)
     norm_test = shuffle_results.apply(stats.shapiro, axis=1)
     norm_test = [test[1] for test in norm_test]
     rand_results = pd.DataFrame({
-        'gene': shuffle_results['gene'],
         'maxMCC': preds_df['maxMCC'],
         'rand_mean': rand_means,
         'rand_std': rand_stds,
         'zscore': (preds_df['maxMCC'] - rand_means) / rand_stds,
         'shapiro_normality': norm_test
-    })
+    }, index=preds_df.index)
     return rand_results
 
 
@@ -88,9 +88,9 @@ def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
                          '-s', new_labels, '-g', gene_list, '-n', str(n_workers)])
 
     shuffle_results = merge_runs(exp_dir, n_runs)
-    shuffle_results.to_csv(f'{exp_dir}/random_distributions.csv', index=False)
+    shuffle_results.to_csv(f'{exp_dir}/random_distributions.csv')
     rand_results = compute_zscores(preds_path, shuffle_results)
-    rand_results.to_csv(f'{exp_dir}/randomization_results.csv', index=False)
+    rand_results.to_csv(f'{exp_dir}/randomization_results.csv')
     os.mkdir('random_exp')
     for i in range(1, n_runs + 1):
         shutil.move(f'{exp_dir}/run{i}', f'{exp_dir}/random_exp')
