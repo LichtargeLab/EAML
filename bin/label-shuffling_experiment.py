@@ -10,10 +10,12 @@ z-score/p-value to top predictions from EA-ML analysis.
 import pandas as pd
 import numpy as np
 import os
+import shutil
 from sys import argv
 import subprocess
 import argparse
 from pathlib import Path
+from scipy import stats
 
 
 def shuffle_labels(df_path, run_dir):
@@ -61,12 +63,15 @@ def compute_zscores(preds_path, shuffle_results):
     preds_df = pd.read_csv(preds_path).sort_values(by='gene')
     rand_means = shuffle_results.mean(axis=1)
     rand_stds = shuffle_results.std(axis=1)
+    norm_test = shuffle_results.apply(stats.shapiro, axis=1)
+    norm_test = [test[1] for test in norm_test]
     rand_results = pd.DataFrame({
         'gene': shuffle_results['gene'],
         'maxMCC': preds_df['maxMCC'],
         'rand_mean': rand_means,
         'rand_std': rand_stds,
-        'zscore': (preds_df['maxMCC'] - rand_means) / rand_stds
+        'zscore': (preds_df['maxMCC'] - rand_means) / rand_stds,
+        'shapiro_normality': norm_test
     })
     return rand_results
 
@@ -86,6 +91,9 @@ def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
     shuffle_results.to_csv(f'{exp_dir}/random_distributions.csv', index=False)
     rand_results = compute_zscores(preds_path, shuffle_results)
     rand_results.to_csv(f'{exp_dir}/randomization_results.csv', index=False)
+    os.mkdir('random_exp')
+    for i in range(1, n_runs + 1):
+        shutil.move(f'{exp_dir}/run{i}', f'{exp_dir}/random_exp')
 
 
 if __name__ == '__main__':
