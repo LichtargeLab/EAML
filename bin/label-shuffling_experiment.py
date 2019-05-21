@@ -60,12 +60,20 @@ def merge_runs(exp_dir, n_runs=100):
     return merged_df
 
 
+def _nonzero_shapiro(arr):
+    """
+    Removes MCCs that equal 0, as these skew the distribution and they are
+    already removed from our whole-genome comparison
+    """
+    filt_arr = np.array([x for x in arr if x != 0])
+    return stats.shapiro(filt_arr)[1]
+
+
 def compute_zscores(preds_path, shuffle_results):
     preds_df = pd.read_csv(preds_path, index_col='gene').sort_index()
     rand_means = shuffle_results.mean(axis=1)
     rand_stds = shuffle_results.std(axis=1)
-    norm_test = shuffle_results.apply(stats.shapiro, axis=1)
-    norm_test = [test[1] for test in norm_test]
+    norm_test = shuffle_results.apply(_nonzero_shapiro, axis=1)
     rand_results = pd.DataFrame({
         'maxMCC': preds_df['maxMCC'],
         'rand_mean': rand_means,
