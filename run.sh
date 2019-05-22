@@ -11,12 +11,12 @@ if ! which conda > /dev/null; then
     read REPLY
     if [ "$REPLY" = "y" ]; then
         echo 'export PATH=/lab/cedar/shared/anaconda3/bin:$PATH' >> $HOME/.bashrc
-        export PATH='/lab/cedar/shared/anaconda3/bin:$PATH'
     else
         echo "Conda is required for proper virtual environment setup."
         exit 1
     fi
 fi
+source $HOME/.bashrc
 
 # Set-up the Environment
 ENV_NAME='pyEA-ML'
