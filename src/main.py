@@ -16,7 +16,6 @@ TODO:
 """
 import datetime
 import os
-import shutil
 import sys
 import time
 from collections import OrderedDict
@@ -26,7 +25,6 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from pysam import VariantFile
-from sklearn.model_selection import StratifiedKFold
 
 import utils
 from design_matrix import DesignMatrix
@@ -39,7 +37,6 @@ class Pipeline(object):
     """
     Attributes:
         expdir (Path): filepath to experiment folder
-        arff_dir (Path): filepath to folder for storing temporary .arff files
         data (str): filepath to VCF file
         tabix (str): filepath to index file for VCF
         targets (np.ndarray): Array of target labels for training/prediction
@@ -61,19 +58,14 @@ class Pipeline(object):
         self.data = os.getenv("DATA")
         self.maf_cutoff = float(os.getenv("MAF"))
         self.seed = int(os.getenv("SEED"))
-        self.arff_dir = self.expdir / 'arffs'
-        if not os.path.exists(self.expdir):
-            os.mkdir(self.expdir)
-        if not os.path.exists(self.arff_dir):
-            os.mkdir(self.arff_dir)
+        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
+
         if os.path.exists(self.data + '.tbi'):
             self.tabix = self.data + '.tbi'
         else:
             self.tabix = None
-            print('Unable to use multiprocessing for VCF parsing without '
-                  'index file.')
 
-        # get feature and sample info
+        # load feature and sample info
         sample_df = pd.read_csv(os.getenv("SAMPLES"), header=None,
                                 dtype={0: str, 1: int})
         sample_df.sort_values(by=0, inplace=True)
@@ -81,7 +73,7 @@ class Pipeline(object):
         self.samples = list(sample_df[0])
         self.test_genes = sorted(list(pd.read_csv(os.getenv("GENELIST"),
                                                   header=None, squeeze=True)))
-        self._ft_labels = self.convert_genes_to_hyp()
+        self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
         matrix = np.ones((len(self.samples), len(self._ft_labels)))
@@ -95,9 +87,8 @@ class Pipeline(object):
         clfs = list(self.clf_info['call_string'])
         params = pd.eval(self.clf_info['options'])
         self.classifiers = dict(zip(clfs, params))
-        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
-    def convert_genes_to_hyp(self):
+    def _convert_genes_to_hyp(self, hyps):
         """
         Converts the test genes to actual feature labels based on test
         hypotheses.
@@ -107,12 +98,8 @@ class Pipeline(object):
         """
         ft_labels = []
         for gene in self.test_genes:
-            ft_labels.append(gene + '_D1')
-            ft_labels.append(gene + '_D30')
-            ft_labels.append(gene + '_D70')
-            ft_labels.append(gene + '_R1')
-            ft_labels.append(gene + '_R30')
-            ft_labels.append(gene + '_R70')
+            for hyp in hyps:
+                ft_labels.append(f'{gene}_{hyp}')
         return ft_labels
 
     def process_contig(self, vcf, contig=None):
@@ -131,7 +118,7 @@ class Pipeline(object):
             score = utils.refactor_EA(rec.info['EA'])
             if not any(score):
                 continue
-            # check for overlapping transcripts
+            # check for overlapping gene annotations
             if isinstance(gene, tuple):
                 if len(gene) == len(score):
                     g_ea_zip = list(zip(gene, score))
@@ -163,7 +150,7 @@ class Pipeline(object):
                         for hyp in self.hypotheses:
                             if utils.check_hyp(zygo, ea, hyp):
                                 self.matrix.update(
-                                    utils.neg_pAFF(ea, zygo),
+                                    utils.neg_pEA(ea, zygo),
                                     '_'.join([g, hyp]), sample)
 
     def process_vcf(self, write_matrix=False):
@@ -179,33 +166,20 @@ class Pipeline(object):
                 if 'invalid contig' in str(e) and contig in ['X', 'Y']:
                     print(f'No {contig} chromosome data.')
                     continue
-        self.matrix.X = 1 - self.matrix.X
+        self.matrix.X = 1 - self.matrix.X  # final pEA computation
         if write_matrix:
             utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
                              self.expdir / 'design_matrix.arff')
 
-    def split_matrix(self):
-        """Splits the DesignMatrix K times for each gene."""
-        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=self.seed)
-        folds = kf.split(self.matrix.X, self.matrix.y)
-        for i, (train, test) in enumerate(folds):
-            for gene in self.test_genes:
-                split = self.matrix.get_gene(gene, hyps=self.hypotheses)
-                ft_labels = ['_'.join([gene, hyp]) for hyp in self.hypotheses]
-                Xtrain = split.X[train, :]
-                ytrain = split.y[train]
-                Xtest = split.X[test, :]
-                ytest = split.y[test]
-                utils.write_arff(Xtrain, ytrain, ft_labels, self.arff_dir / (
-                    '{}_{}-train.arff'.format(gene, i)))
-                utils.write_arff(Xtest, ytest, ft_labels, self.arff_dir / (
-                    '{}_{}-test.arff'.format(gene, i)))
-
     def run_weka_exp(self):
-        gene_result_d = run_weka(self.test_genes, self.nb_cores, self.arff_dir,
-                                 self.classifiers)
+        gene_result_d = run_weka(self.matrix, self.test_genes, self.nb_cores,
+                                 self.classifiers, hyps=self.hypotheses,
+                                 seed=self.seed)
+        # remap classifier object strings to simplified names
         clf_remap = pd.Series(self.clf_info['classifier'].values,
                               index=self.clf_info['call_string']).to_dict()
+
+        # summarize results
         idx = [(gene, clf) for gene in self.test_genes
                for clf in self.classifiers.keys()]
         idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
@@ -233,21 +207,14 @@ class Pipeline(object):
         final_df.sort_values('maxMCC', ascending=False)
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
-    def cleanup(self):
-        shutil.rmtree(self.arff_dir)
-
 
 def main():
     pipeline = Pipeline()
     pipeline.process_vcf()
     print('Feature matrix loaded.')
-    print('Splitting matrix by gene...')
-    pipeline.split_matrix()
-    print('Matrix split complete.')
     print('Running experiment...')
     pipeline.run_weka_exp()
     pipeline.write_results()
-    pipeline.cleanup()
     print('Gene scoring completed. Analysis summary in experiment directory.')
 
 

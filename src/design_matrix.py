@@ -27,8 +27,8 @@ class DesignMatrix(object):
         y (ndarray)
     """
     def __init__(self, X, y, feature_labels, id_labels):
-        self._feature_labels = feature_labels
-        self._id_labels = id_labels
+        self.feature_labels = feature_labels
+        self.id_labels = id_labels
         self.X = X
         self.y = y
         self._ft_map = OrderedDict((feature, i) for i, feature in
@@ -48,14 +48,22 @@ class DesignMatrix(object):
         id_idx = self._id_map[sample]
         self.X[id_idx, ft_idx] *= val
 
-    def get_gene(self, gene, hyps=None):
+    def get_genes(self, genes, hyps=None):
         if hyps:
-            col_names = ['_'.join([gene, hyp]) for hyp in hyps]
+            col_names = ['_'.join([gene, hyp]) for hyp in hyps
+                         for gene in genes]
             col_idxs = [self._ft_map[ft] for ft in col_names]
-            return DesignMatrix(self.X[:, col_idxs], self.y,
-                                [self._feature_labels[idx] for idx in col_idxs],
-                                self._id_labels)
+            return DesignMatrix(
+                self.X[:, col_idxs],
+                self.y,
+                [self.feature_labels[idx] for idx in col_idxs],
+                self.id_labels
+            )
         else:
-            idx = self._ft_map[gene]
-            return DesignMatrix(self.X[:, idx], self.y,
-                                self._feature_labels[idx], self._id_labels)
+            col_idxs = [self._ft_map[gene] for gene in genes]
+            return DesignMatrix(
+                self.X[:, col_idxs],
+                self.y,
+                [self.feature_labels[idx] for idx in col_idxs],
+                self.id_labels
+            )

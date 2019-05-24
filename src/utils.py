@@ -35,7 +35,7 @@ def refactor_EA(EA):
     return newEA
 
 
-def neg_pAFF(EA, zygo):
+def neg_pEA(EA, zygo):
     return (1 - (EA / 100))**zygo
 
 
