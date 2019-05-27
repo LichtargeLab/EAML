@@ -34,7 +34,6 @@ export PATH=${JAVA_HOME}/bin:$PATH
 
 # Set-up .env
 SEED=111
-MAF=2
 if [ ! -f ./.env ]; then
     # Make the file
     # Record the results folder destination
@@ -56,7 +55,6 @@ if [ ! -f ./.env ]; then
             g) GENELIST=$OPTARG;;
             n) CORES=$OPTARG;;
             r) SEED=$OPTARG;;
-            f) MAF=$OPTARG;;
             \?) echo "Invalid Option: -$OPTARG" 1>&2
                 echo ${USAGE}
                 exit 1;;
@@ -73,7 +71,6 @@ if [ ! -f ./.env ]; then
     dotenv -f .env set GENELIST ${GENELIST}
     dotenv -f .env set CORES ${CORES}
     dotenv -f .env set SEED ${SEED}
-    dotenv -f .env set MAF ${MAF}
 fi
 
 # run pipeline
