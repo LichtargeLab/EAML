@@ -45,7 +45,7 @@ if [ ! -f ./.env ]; then
            -n <nb_cores>\n
            -r <random_seed>\n\n
            ./run.sh -h      Display this help message.\n"
-    while getopts ":he:d:s:g:n:r:f:" opt; do
+    while getopts ":he:d:s:g:n:r:" opt; do
         case ${opt} in
             h) echo ${USAGE}
                exit 0;;
