@@ -9,7 +9,7 @@ repSource=$(readlink -f `dirname ${BASH_SOURCE[0]}`)
 if ! which conda > /dev/null; then
     echo -e "Conda not found! Install? (y/n) \c"
     read REPLY
-    if [ "$REPLY" = "y" ]; then
+    if [[ "$REPLY" = "y" ]]; then
         echo 'export PATH=/lab/cedar/shared/anaconda3/bin:$PATH' >> $HOME/.bashrc
     else
         echo "Conda is required for proper virtual environment setup."
@@ -22,7 +22,7 @@ source $HOME/.bashrc
 ENV_NAME='pyEA-ML'
 
 ENVS=$(conda env list | awk '{print $1}' )
-if [[ $ENVS = *$ENV_NAME* ]]; then
+if [[ ${ENVS} = *${ENV_NAME}* ]]; then
    source activate ${ENV_NAME}
 else
     # make virtual environment
@@ -34,20 +34,25 @@ export PATH=${JAVA_HOME}/bin:$PATH
 
 # Set-up .env
 SEED=111
-if [ ! -f ./.env ]; then
+CORES=4
+if [[ ! -f ./.env ]]; then
     # Make the file
     # Record the results folder destination
-    USAGE="Usage:\n
-           ./run.sh -e <experiment_folder>\n
-           -d <data>\n
-           -s <sample_file>\n
-           -g <gene_list>\n
-           -n <nb_cores>\n
-           -r <random_seed>\n\n
-           ./run.sh -h      Display this help message.\n"
+    USAGE="Usage:  ./run.sh
+               -e          <experiment_folder>
+               -d          <data>
+               -s          <sample_file>
+               -g          <gene_list>
+               -n          <nb_cores>
+               -r          <random_seed>
+
+
+           ./run.sh -h     Display this help message.
+           "
+
     while getopts ":he:d:s:g:n:r:" opt; do
         case ${opt} in
-            h) echo ${USAGE}
+            h) echo "${USAGE}"
                exit 0;;
             e) EXPDIR=$OPTARG;;
             d) DATA=$OPTARG;;
@@ -56,9 +61,9 @@ if [ ! -f ./.env ]; then
             n) CORES=$OPTARG;;
             r) SEED=$OPTARG;;
             \?) echo "Invalid Option: -$OPTARG" 1>&2
-                echo ${USAGE}
+                echo "${USAGE}"
                 exit 1;;
-            *) echo ${USAGE}
+            *) echo "${USAGE}"
                exit 1;;
         esac
     done
