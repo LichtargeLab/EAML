@@ -15,7 +15,7 @@ from sklearn.model_selection import StratifiedKFold
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
 from weka.core.dataset import Attribute
-from weka.core.converters import ndarray_to_instances
+from weka.core.converters import ndarray_to_instances, save_any_file
 
 
 def _init_worker():
@@ -63,8 +63,13 @@ def convert_array(X, y, gene, col_names):
     cls_attr_pos = len(col_names)
     arff.insert_attribute(cls_attr, cls_attr_pos)
     for i, label in enumerate(labels):
-        inst = arff.get_instance(i)
-        inst.set_string_value(cls_attr_pos, label)
+        # check for weird DenseInstance calling issue
+        try:
+            inst = arff.get_instance(i)
+            inst.set_string_value(cls_attr_pos, label)
+        except TypeError as e:
+            save_any_file(arff, 'error_matrix.arff')
+            raise e
     return arff
 
 
