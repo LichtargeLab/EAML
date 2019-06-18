@@ -14,8 +14,8 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
-from weka.core.dataset import Attribute
-from weka.core.converters import ndarray_to_instances, save_any_file
+from weka.core.converters import ndarray_to_instances
+from weka.filters import Filter
 
 
 def _init_worker():
@@ -30,6 +30,7 @@ def _weka_worker(chunk, clf_dict, folds, hyps):
     for gene in gene_list:
         sub_matrix = matrix.get_genes([gene], hyps=hyps)
         col_names = sub_matrix.feature_labels
+        col_names.append('class')
         result_d[gene] = defaultdict(list)
         for i, (train, test) in enumerate(folds):
             train_X = sub_matrix.X[train, :]
@@ -39,8 +40,6 @@ def _weka_worker(chunk, clf_dict, folds, hyps):
 
             train_arff = convert_array(train_X, train_y, gene, col_names)
             test_arff = convert_array(test_X, test_y, gene, col_names)
-            train_arff.class_is_last()
-            test_arff.class_is_last()
 
             for clf_str, opts in clf_dict.items():
                 clf = Classifier(classname=clf_str, options=opts)
@@ -56,21 +55,19 @@ def _weka_worker(chunk, clf_dict, folds, hyps):
 
 
 def convert_array(X, y, gene, col_names):
-    arff = ndarray_to_instances(X, gene,
-                                att_list=col_names)
-    labels = [str(y) for y in y]
-    cls_attr = Attribute.create_nominal('class', ['0', '1'])
-    cls_attr_pos = len(col_names)
-    arff.insert_attribute(cls_attr, cls_attr_pos)
-    for i, label in enumerate(labels):
-        # check for weird DenseInstance calling issue
-        try:
-            inst = arff.get_instance(i)
-            inst.set_string_value(cls_attr_pos, label)
-        except TypeError as e:
-            save_any_file(arff, 'error_matrix.arff')
-            raise e
-    return arff
+    # reshape y and append to X
+    labels = y.reshape((len(y), 1))
+    data = np.append(X, labels, axis=1)
+    # convert to ARFF format
+    arff = ndarray_to_instances(data, gene, att_list=col_names)
+    # convert label attribute to nominal type
+    nominal = Filter(
+        classname='weka.filters.unsupervised.attribute.NumericToNominal',
+        options=['-R', 'last'])
+    nominal.inputformat(arff)
+    arff_reform = nominal.filter(arff)
+    arff_reform.class_is_last()
+    return arff_reform
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_dict,
