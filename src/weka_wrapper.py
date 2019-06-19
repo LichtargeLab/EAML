@@ -7,7 +7,6 @@ Created on 2019-04-17
 import signal
 import sys
 from collections import defaultdict
-from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
@@ -18,21 +17,38 @@ from weka.core.converters import ndarray_to_instances
 from weka.filters import Filter
 
 
-def _init_worker():
+def _init_worker(arr, clf_dict, folds, hyps):
+    """
+    Initializes each worker process. This makes the design matrix data available
+    as a shared global variable within the pool.
+
+    Args:
+        arr (DesignMatrix): The DesignMatrix object containing the feature data.
+        clf_dict (dict): Dictionary of Weka classifier call and its options.
+        folds (list): Train/test indices for kfolds.
+        hyps (list): The hypotheses for fetching features.
+    """
+    global data_matrix
+    data_matrix = arr
+    global clf_calls
+    clf_calls = clf_dict
+    global kfolds
+    kfolds = folds
+    global hypotheses
+    hypotheses = hyps
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def _weka_worker(chunk, clf_dict, folds, hyps):
+def _weka_worker(gene_split):
     """Worker process for Weka experiments"""
-    matrix, gene_list = chunk
     jvm.start(bundled=False)
     result_d = {}
-    for gene in gene_list:
-        sub_matrix = matrix.get_genes([gene], hyps=hyps)
+    for gene in gene_split:
+        sub_matrix = data_matrix.get_genes([gene], hyps=hypotheses)
         col_names = sub_matrix.feature_labels
         col_names.append('class')
         result_d[gene] = defaultdict(list)
-        for i, (train, test) in enumerate(folds):
+        for i, (train, test) in enumerate(kfolds):
             train_X = sub_matrix.X[train, :]
             train_y = sub_matrix.y[train]
             test_X = sub_matrix.X[test, :]
@@ -41,7 +57,7 @@ def _weka_worker(chunk, clf_dict, folds, hyps):
             train_arff = convert_array(train_X, train_y, gene, col_names)
             test_arff = convert_array(test_X, test_y, gene, col_names)
 
-            for clf_str, opts in clf_dict.items():
+            for clf_str, opts in clf_calls.items():
                 clf = Classifier(classname=clf_str, options=opts)
                 clf.build_classifier(train_arff)
                 evl = Evaluation(train_arff)
@@ -82,16 +98,14 @@ def run_weka(design_matrix, test_genes, n_workers, clf_dict,
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
     gene_splits = np.array_split(np.array(test_genes), n_workers)
-    # split DesignMatrix by each chunk of genes
-    data_splits = [design_matrix.get_genes(split, hyps=hyps)
-                   for split in gene_splits]
-    chunks = list(zip(data_splits, gene_splits))
     kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
     splits = list(kf.split(design_matrix.X, design_matrix.y))
-    pool = Pool(n_workers, _init_worker, maxtasksperchild=1)
-    worker = partial(_weka_worker, clf_dict=clf_dict, folds=splits, hyps=hyps)
+    # these are set as globals in the worker initializer
+    global_args = [design_matrix, clf_dict, splits, hyps]
+    pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
+                maxtasksperchild=1)
     try:
-        results = pool.map(worker, chunks)
+        results = pool.map(_weka_worker, gene_splits)
         pool.close()
         pool.join()
         for result in results:
