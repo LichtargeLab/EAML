@@ -82,6 +82,7 @@ def convert_array(X, y, gene, col_names):
         with open('error.log', 'a+') as f:
             error_idx = _instance_error_check(data)
             f.write(f'Instance creation failed at {gene}, row {error_idx}\n')
+            f.write(f'{data[0]}\n')
             f.write(f'{e}\n')
         raise e
 
