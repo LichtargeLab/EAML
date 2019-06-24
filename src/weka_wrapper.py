@@ -15,6 +15,7 @@ import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
 from weka.core.converters import ndarray_to_instances
 from weka.filters import Filter
+from weka.core.dataset import Instance
 
 
 def _init_worker(arr, clf_dict, folds, hyps):
@@ -77,10 +78,11 @@ def convert_array(X, y, gene, col_names):
     # convert to ARFF format
     try:
         arff = ndarray_to_instances(data, gene, att_list=col_names)
-    except TypeError as e:
-        print(data.dtype)
-        np.savetxt('error_matrix.log', data, delimiter=',', newline='\n',
-                   header=','.join(col_names))
+    except TypeError as e:  # catches and logs any errors with Instance creation
+        with open('error.log', 'a+') as f:
+            error_idx = _instance_error_check(data)
+            f.write(f'Instance creation failed at {gene}, row {error_idx}\n')
+            f.write(f'{e}\n')
         raise e
 
     # convert label attribute to nominal type
@@ -91,6 +93,17 @@ def convert_array(X, y, gene, col_names):
     arff_reform = nominal.filter(arff)
     arff_reform.class_is_last()
     return arff_reform
+
+
+def _instance_error_check(array):
+    rows = array.shape[0]
+    for i in range(rows):
+        try:
+            Instance.create_instance(array[i])
+        except TypeError:
+            print(f'Row index at error: {i}')
+            print(array[i])
+            return i
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_dict,
