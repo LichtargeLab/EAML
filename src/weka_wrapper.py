@@ -75,7 +75,14 @@ def convert_array(X, y, gene, col_names):
     labels = y.reshape((len(y), 1))
     data = np.append(X, labels, axis=1)
     # convert to ARFF format
-    arff = ndarray_to_instances(data, gene, att_list=col_names)
+    try:
+        arff = ndarray_to_instances(data, gene, att_list=col_names)
+    except TypeError as e:
+        print(data.dtype)
+        np.savetxt('error_matrix.log', data, delimiter=',', newline='\n',
+                   header=','.join(col_names))
+        raise e
+
     # convert label attribute to nominal type
     nominal = Filter(
         classname='weka.filters.unsupervised.attribute.NumericToNominal',
