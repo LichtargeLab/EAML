@@ -36,18 +36,20 @@ load_dotenv(Path('.') / '.env')
 class Pipeline(object):
     """
     Attributes:
+        nb_cores (int): Number of cores to be used by Weka
         expdir (Path): filepath to experiment folder
         data (str): filepath to VCF file
+        seed (int): Random seed for KFold sampling
+        hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
         tabix (str): filepath to index file for VCF
         targets (np.ndarray): Array of target labels for training/prediction
         samples (list): List of samples to test
         test_genes (list): list of genes to test
-        result_df (pd.DataFrame): The DataFrame that stores experiment results
         matrix (DesignMatrix): Object for containing feature information for
             each gene and sample.
-        classifiers (list): A list of tuples that maps classifiers from Weka to
-            their hyperparameters.
-        hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
+        result_df (pd.DataFrame): The DataFrame that stores experiment results
+        clf_info (DataFrame): A DataFrame mapping classifier names to their
+            corresponding Weka object names and hyperparameters.
     """
     def __init__(self):
         # Import env information
@@ -57,6 +59,7 @@ class Pipeline(object):
         self.seed = int(os.getenv("SEED"))
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
+        # import tabix-indexed file if possible
         if os.path.exists(self.data + '.tbi'):
             self.tabix = self.data + '.tbi'
         else:
@@ -78,12 +81,9 @@ class Pipeline(object):
                                    self.samples)
         self.result_df = None
 
-        # map classifiers to hyperparameters
+        # load classifier information
         pipe_path = os.path.dirname(sys.argv[0])
         self.clf_info = pd.read_csv(pipe_path + '/../classifiers.csv')
-        clfs = list(self.clf_info['call_string'])
-        params = pd.eval(self.clf_info['options'])
-        self.classifiers = dict(zip(clfs, params))
 
     def _convert_genes_to_hyp(self, hyps):
         """
@@ -165,36 +165,38 @@ class Pipeline(object):
                              self.expdir / 'design_matrix.arff')
 
     def run_weka_exp(self):
-        gene_result_d = run_weka(self.matrix, self.test_genes, self.nb_cores,
-                                 self.classifiers, hyps=self.hypotheses,
-                                 seed=self.seed)
-        # remap classifier object strings to simplified names
-        clf_remap = pd.Series(self.clf_info['classifier'].values,
-                              index=self.clf_info['call_string']).to_dict()
+        """Wraps call to weka_wrapper functions"""
+        run_weka(self.matrix, self.test_genes, self.nb_cores, self.clf_info,
+                 hyps=self.hypotheses, seed=self.seed)
 
-        # summarize results
-        idx = [(gene, clf) for gene in self.test_genes
-               for clf in self.classifiers.keys()]
-        idx = pd.MultiIndex.from_tuples(idx, names=['gene', 'classifier'])
-        df = pd.DataFrame(list(fold for clf in gene_result_d.values() for
-                               fold in clf.values()), index=idx)
-        df.rename(index=clf_remap, inplace=True)
-        df['meanMCC'] = df.mean(axis=1)
-        df.to_csv(self.expdir / 'gene_MCC_summary.csv')
-        self.result_df = df
+    def summarize_experiment(self):
+        """Combines results from Weka experiment files."""
+        worker_files = Path('.').glob('worker-*.results.csv')
+        dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
+        result_df = pd.concat(dfs, ignore_index=True)
+        result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(10)]
+        result_df['meanMCC'] = result_df.mean(axis=1)
+        result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
+        self.result_df = result_df
 
     def write_results(self):
         genes = [k for k in OrderedDict.fromkeys(
             self.result_df.index.get_level_values('gene')).keys()]
         clfs = set(self.result_df.index.get_level_values('classifier'))
         clf_d = OrderedDict([('gene', list(genes))])
+
+        # write summary file for each classifier
         for clf in clfs:
             clf_df = self.result_df.xs(clf, level='classifier')
             clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
             clf_d[clf] = list(clf_df['meanMCC'])
+
+        # aggregate meanMCCs from each classifier
         mean_df = pd.DataFrame.from_dict(clf_d)
         mean_df.to_csv(self.expdir / 'all-classifier_summary.csv',
                        index=False)
+
+        # fetch maxMCC for each gene and write final rankings file
         max_vals = mean_df.max(axis=1)
         final_df = pd.DataFrame({'gene': genes, 'maxMCC': max_vals})
         final_df.sort_values('maxMCC', ascending=False)
@@ -207,6 +209,7 @@ def main():
     print('Feature matrix loaded.')
     print('Running experiment...')
     pipeline.run_weka_exp()
+    pipeline.summarize_experiment()
     pipeline.write_results()
     print('Gene scoring completed. Analysis summary in experiment directory.')
 

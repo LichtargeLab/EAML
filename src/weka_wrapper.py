@@ -18,21 +18,22 @@ from weka.filters import Filter
 from weka.core.dataset import Instance
 
 
-def _init_worker(arr, clf_dict, folds, hyps):
+def _init_worker(arr, clf_info, folds, hyps):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
 
     Args:
         arr (DesignMatrix): The DesignMatrix object containing the feature data.
-        clf_dict (dict): Dictionary of Weka classifier call and its options.
+        clf_info (DataFrame): DataFrame of Weka classifiers, their Weka
+            object names, and hyperparameters.
         folds (list): Train/test indices for kfolds.
         hyps (list): The hypotheses for fetching features.
     """
     global data_matrix
     data_matrix = arr
     global clf_calls
-    clf_calls = clf_dict
+    clf_calls = clf_info
     global kfolds
     kfolds = folds
     global hypotheses
@@ -41,34 +42,51 @@ def _init_worker(arr, clf_dict, folds, hyps):
 
 
 def _weka_worker(gene_split):
-    """Worker process for Weka experiments"""
+    """
+    Worker process for Weka experiments
+
+    Args:
+        gene_split (ndarray): The split of genes to test through.
+    """
+    wrk_idx, genes = gene_split
     jvm.start(bundled=False)
-    result_d = {}
-    for gene in gene_split:
+    for gene in genes:
         sub_matrix = data_matrix.get_genes([gene], hyps=hypotheses)
         col_names = sub_matrix.feature_labels
         col_names.append('class')
-        result_d[gene] = defaultdict(list)
+        result_d = defaultdict(list)
         for i, (train, test) in enumerate(kfolds):
+            # retrieve fold
             train_X = sub_matrix.X[train, :]
             train_y = sub_matrix.y[train]
             test_X = sub_matrix.X[test, :]
             test_y = sub_matrix.y[test]
 
+            # convert numpy arrays to arff format
             train_arff = convert_array(train_X, train_y, gene, col_names)
             test_arff = convert_array(test_X, test_y, gene, col_names)
 
-            for clf_str, opts in clf_calls.items():
-                clf = Classifier(classname=clf_str, options=opts)
-                clf.build_classifier(train_arff)
+            # run each classifier
+            for row in clf_calls.itertuples():
+                _, clf, clf_str, opts = row
+                clf_obj = Classifier(classname=clf_str, options=opts)
+                clf_obj.build_classifier(train_arff)
                 evl = Evaluation(train_arff)
-                _ = evl.test_model(clf, test_arff)
+                _ = evl.test_model(clf_obj, test_arff)
                 mcc = evl.matthews_correlation_coefficient(1)
                 if np.isnan(mcc):
                     mcc = 0
-                result_d[gene][clf_str].append(mcc)
+                result_d[clf].append(mcc)
+        _append_results(f'worker-{wrk_idx}.results.csv', gene, result_d)
     jvm.stop()
-    return result_d
+
+
+def _append_results(worker_file, gene, gene_results):
+    """"Append gene's scores to worker file"""
+    with open(worker_file, 'a+') as f:
+        for clf, scores in gene_results.items():
+            row = ','.join([gene, clf] + scores)
+            f.write(f'{row}\n')
 
 
 def convert_array(X, y, gene, col_names):
@@ -107,7 +125,7 @@ def _instance_error_check(array):
             return i
 
 
-def run_weka(design_matrix, test_genes, n_workers, clf_dict,
+def run_weka(design_matrix, test_genes, n_workers, clf_info,
              hyps=None, seed=111):
     """
     The overall Weka experiment. The steps include loading the K .arff files
@@ -118,19 +136,18 @@ def run_weka(design_matrix, test_genes, n_workers, clf_dict,
     gene_result_d = {}
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
-    gene_splits = np.array_split(np.array(test_genes), n_workers)
+    gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
+    # generate KFold groups for samples
     kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
     splits = list(kf.split(design_matrix.X, design_matrix.y))
     # these are set as globals in the worker initializer
-    global_args = [design_matrix, clf_dict, splits, hyps]
+    global_args = [design_matrix, clf_info, splits, hyps]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
                 maxtasksperchild=1)
     try:
-        results = pool.map(_weka_worker, gene_splits)
+        pool.map(_weka_worker, gene_splits)
         pool.close()
         pool.join()
-        for result in results:
-            gene_result_d.update(result)
     except KeyboardInterrupt:
         print('Caught KeyboardInterrupt, terminating workers')
         pool.terminate()
