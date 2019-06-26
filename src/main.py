@@ -20,6 +20,7 @@ import sys
 import time
 from collections import OrderedDict
 from pathlib import Path
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -99,6 +100,15 @@ class Pipeline(object):
                 ft_labels.append(f'{gene}_{hyp}')
         return ft_labels
 
+    def load_matrix(self, matrix_f):
+        """
+        Loads an existing numpy array as the design matrix.
+
+        Args:
+            matrix_f (str): Path to the compressed matrix.
+        """
+        self.matrix.load_matrix(matrix_f)
+
     def process_contig(self, vcf, contig=None):
         """
         Reads and updates features in DesignMatrix based on a single contig.
@@ -148,7 +158,7 @@ class Pipeline(object):
                                     utils.neg_pEA(ea, zygo),
                                     '_'.join([g, hyp]), sample)
 
-    def process_vcf(self, write_matrix=False):
+    def process_vcf(self):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
         for contig in list(range(1, 23)) + ['X', 'Y']:
@@ -160,9 +170,7 @@ class Pipeline(object):
                     print(f'No {contig} chromosome data.')
                     continue
         self.matrix.X = 1 - self.matrix.X  # final pEA computation
-        if write_matrix:
-            utils.write_arff(self.matrix.X, self.matrix.y, self._ft_labels,
-                             self.expdir / 'design_matrix.arff')
+        self.matrix.write_matrix(self.expdir / 'design_matrix.npz')
 
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
@@ -202,11 +210,31 @@ class Pipeline(object):
         final_df.sort_values('maxMCC', ascending=False)
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
+    def cleanup(self):
+        pass
+
+
+def argparser():
+    parser = argparse.ArgumentParser(
+        description='Main script for pyEA-ML pipeline.')
+    parser.add_argument('-m', '--matrix', default='design_matrix.arff',
+                        help="Optionally loads existing arff matrix")
+
+    args = parser.parse_args()
+    return args
+
 
 def main():
+    args = argparser()  # parse console arguments
     pipeline = Pipeline()
-    pipeline.process_vcf()
+
+    # either load existing design matrix or compute new one from VCF
+    if args.matrix:
+        pipeline.load_matrix(args.matrix)
+    else:
+        pipeline.process_vcf()
     print('Feature matrix loaded.')
+
     print('Running experiment...')
     pipeline.run_weka_exp()
     pipeline.summarize_experiment()

@@ -38,19 +38,23 @@ CORES=4
 if [[ ! -f ./.env ]]; then
     # Make the file
     # Record the results folder destination
-    USAGE="Usage:  ./run.sh
+    USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
+
+            Required arguments:
                -e          <experiment_folder>
                -d          <data>
                -s          <sample_file>
                -g          <gene_list>
+
+            Optional arguments:
                -n          <nb_cores>
                -r          <random_seed>
-
+               -m          <.npz matrix>
 
            ./run.sh -h     Display this help message.
            "
 
-    while getopts ":he:d:s:g:n:r:" opt; do
+    while getopts ":he:d:s:g:n:r:m:" opt; do
         case ${opt} in
             h) echo "${USAGE}"
                exit 0;;
@@ -60,6 +64,7 @@ if [[ ! -f ./.env ]]; then
             g) GENELIST=$OPTARG;;
             n) CORES=$OPTARG;;
             r) SEED=$OPTARG;;
+            m) MATRIX=$OPTARG;;
             \?) echo "Invalid Option: -$OPTARG" 1>&2
                 echo "${USAGE}"
                 exit 1;;
@@ -79,4 +84,4 @@ if [[ ! -f ./.env ]]; then
 fi
 
 # run pipeline
-python ${repSource}/src/main.py
+python ${repSource}/src/main.py ${MATRIX}

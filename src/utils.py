@@ -65,26 +65,3 @@ def convert_zygo(genotype):
     else:
         zygo = 0
     return zygo
-
-
-def write_arff(X, y, ft_labels, output):
-    """
-    Outputs an .arff file corresponding to a feature matrix of interest.
-
-    Args:
-        X (ndarray): The feature matrix
-        y (ndarray): The classification labels
-        ft_labels (list): The label for each feature
-        output (str/Path): The filepath for the output
-    """
-    with open(output, 'w') as f:
-        f.write('@relation '
-                '{}\n'.format(str(output).split('/')[-1].split('.')[0]))
-        for ft in ft_labels:
-            f.write('@attribute {} REAL\n'.format(ft))
-        f.write('@attribute class {0,1}\n')
-        f.write('@data\n')
-        for i, row in enumerate(X):
-            example = [str(x) for x in row]
-            example.append(str(y[i]))
-            f.write(','.join(example) + '\n')

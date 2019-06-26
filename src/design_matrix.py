@@ -9,6 +9,7 @@ Created on 2019-01-28
 These are the commonly used data containers within the pipeline.
 """
 from collections import OrderedDict
+from scipy.sparse import load_npz, save_npz, csr_matrix
 
 
 class DesignMatrix(object):
@@ -67,3 +68,25 @@ class DesignMatrix(object):
                 [self.feature_labels[idx] for idx in col_idxs],
                 self.id_labels
             )
+
+    def load_matrix(self, matrix_f):
+        """
+        Loads an existing numpy matrix, replacing the existing X attribute.
+
+        Args:
+            matrix_f (str): Path to the compressed matrix.
+        """
+        if not matrix_f.endswith('.npz'):
+            raise Exception(f'{matrix_f} does not use .npz format.')
+        sp_matrix = load_npz(matrix_f)
+        self.X = sp_matrix.toarray()
+
+    def write_matrix(self, f_out):
+        """
+        Writes X matrix out as compressed sparse matrix in .npz format.
+
+        Args:
+            f_out (str): Filepath to save compressed matrix to.
+        """
+        sp_matrix = csr_matrix(self.X)
+        save_npz(f_out, sp_matrix)
