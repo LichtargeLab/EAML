@@ -32,56 +32,42 @@ fi
 export JAVA_HOME=${CONDA_PREFIX}/jre
 export PATH=${JAVA_HOME}/bin:$PATH
 
-# Set-up .env
-SEED=111
-CORES=4
-if [[ ! -f ./.env ]]; then
-    # Make the file
-    # Record the results folder destination
-    USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
+USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
 
-            Required arguments:
-               -e          <experiment_folder>
-               -d          <data>
-               -s          <sample_file>
-               -g          <gene_list>
+        Required arguments:
+           -e <directory>       experiment directory
+           -d <file>            VCF or .npz matrix
+           -s <file>            two-column CSV with sample IDs and disease status
+           -g <file>            single-column list of genes
 
-            Optional arguments:
-               -n          <nb_cores>
-               -r          <random_seed>
-               -m          <.npz matrix>
+        Optional arguments:
+           -t <int>             number of threads for Weka to use
+           -r <int>             random seed for KFold sampling
+           -h                   Display this help message.
+       "
 
-           ./run.sh -h     Display this help message.
-           "
-
-    while getopts ":he:d:s:g:n:r:m:" opt; do
-        case ${opt} in
-            h) echo "${USAGE}"
-               exit 0;;
-            e) EXPDIR=$OPTARG;;
-            d) DATA=$OPTARG;;
-            s) SAMPLES=$OPTARG;;
-            g) GENELIST=$OPTARG;;
-            n) CORES=$OPTARG;;
-            r) SEED=$OPTARG;;
-            m) MATRIX=$OPTARG;;
-            \?) echo "Invalid Option: -$OPTARG" 1>&2
-                echo "${USAGE}"
-                exit 1;;
-            *) echo "${USAGE}"
-               exit 1;;
-        esac
-    done
-    shift $((OPTIND -1))
-    cd ${EXPDIR}
-    touch .env
-    dotenv -f .env set EXPDIR ${EXPDIR}
-    dotenv -f .env set DATA ${DATA}
-    dotenv -f .env set SAMPLES ${SAMPLES}
-    dotenv -f .env set GENELIST ${GENELIST}
-    dotenv -f .env set CORES ${CORES}
-    dotenv -f .env set SEED ${SEED}
-fi
+# parse command line arguments
+seed=111
+threads=1
+while getopts ":he:d:s:g:n:r:m:o" opt; do
+    case ${opt} in
+        h) echo "${USAGE}"
+           exit 0;;
+        e) exp_dir=$OPTARG;;
+        d) data=$OPTARG;;
+        s) samples=$OPTARG;;
+        g) genelist=$OPTARG;;
+        t) threads=$OPTARG;;
+        r) seed=$OPTARG;;
+        \?) echo "Invalid Option: -$OPTARG" 1>&2
+            echo "${USAGE}"
+            exit 1;;
+        *) echo "${USAGE}"
+           exit 1;;
+    esac
+done
+shift $((OPTIND -1))
 
 # run pipeline
-python ${repSource}/src/main.py ${MATRIX}
+cd ${exp_dir}
+python ${repSource}/src/main.py ${exp_dir} ${data} ${samples} ${genelist} -t ${threads} -r ${seed}

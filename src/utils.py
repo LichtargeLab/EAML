@@ -7,6 +7,7 @@ Created on 2019-01-28
 @author: dillonshapiro
 """
 import re
+from scipy.sparse import load_npz
 
 
 def refactor_EA(EA):
@@ -65,3 +66,18 @@ def convert_zygo(genotype):
     else:
         zygo = 0
     return zygo
+
+def load_matrix(matrix_f):
+    """
+    Loads an existing numpy matrix, replacing the existing X attribute.
+
+    Args:
+        matrix_f (str): Path to the compressed matrix.
+
+    Returns:
+        ndarray: Precomputed design matrix
+    """
+    if not matrix_f.endswith('.npz'):
+        raise Exception(f'{matrix_f} does not use .npz format.')
+    sp_matrix = load_npz(matrix_f)
+    return sp_matrix.toarray()

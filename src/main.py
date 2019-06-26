@@ -7,12 +7,6 @@ Created on 1/21/19
 @author: dillonshapiro
 
 Main script for EA-ML pipeline.
-
-TODO:
-    * add check for existing .arff matrix
-    * option to write large arff matrix or not
-    * switch to arff gene-split method to direct numpy-split-arff conversion
-    * clean up option handling in run.sh
 """
 import datetime
 import os
@@ -24,20 +18,17 @@ import argparse
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from pysam import VariantFile
 
 import utils
 from design_matrix import DesignMatrix
 from weka_wrapper import run_weka
 
-load_dotenv(Path('.') / '.env')
-
 
 class Pipeline(object):
     """
     Attributes:
-        nb_cores (int): Number of cores to be used by Weka
+        threads (int): Number of cores to be used by Weka
         expdir (Path): filepath to experiment folder
         data (str): filepath to VCF file
         seed (int): Random seed for KFold sampling
@@ -52,12 +43,11 @@ class Pipeline(object):
         clf_info (DataFrame): A DataFrame mapping classifier names to their
             corresponding Weka object names and hyperparameters.
     """
-    def __init__(self):
-        # Import env information
-        self.nb_cores = int(os.getenv("CORES"))
-        self.expdir = Path(os.getenv("EXPDIR"))
-        self.data = os.getenv("DATA")
-        self.seed = int(os.getenv("SEED"))
+    def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111):
+        self.threads = threads
+        self.expdir = expdir
+        self.data = data
+        self.seed = seed
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
         # import tabix-indexed file if possible
@@ -67,18 +57,21 @@ class Pipeline(object):
             self.tabix = None
 
         # load feature and sample info
-        sample_df = pd.read_csv(os.getenv("SAMPLES"), header=None,
+        sample_df = pd.read_csv(sample_f, header=None,
                                 dtype={0: str, 1: int})
         sample_df.sort_values(by=0, inplace=True)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = sorted(list(pd.read_csv(os.getenv("GENELIST"),
-                                                  header=None, squeeze=True)))
+        self.test_genes = sorted(list(
+            pd.read_csv(gene_list, header=None, squeeze=True)))
         self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
-        matrix = np.ones((len(self.samples), len(self._ft_labels)))
-        self.matrix = DesignMatrix(matrix, self.targets, self._ft_labels,
+        if self.data.endswith('.npz'):
+            arr = utils.load_matrix(self.data)
+        else:
+            arr = np.ones((len(self.samples), len(self._ft_labels)))
+        self.matrix = DesignMatrix(arr, self.targets, self._ft_labels,
                                    self.samples)
         self.result_df = None
 
@@ -99,15 +92,6 @@ class Pipeline(object):
             for hyp in hyps:
                 ft_labels.append(f'{gene}_{hyp}')
         return ft_labels
-
-    def load_matrix(self, matrix_f):
-        """
-        Loads an existing numpy array as the design matrix.
-
-        Args:
-            matrix_f (str): Path to the compressed matrix.
-        """
-        self.matrix.load_matrix(matrix_f)
 
     def process_contig(self, vcf, contig=None):
         """
@@ -174,7 +158,7 @@ class Pipeline(object):
 
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
-        run_weka(self.matrix, self.test_genes, self.nb_cores, self.clf_info,
+        run_weka(self.matrix, self.test_genes, self.threads, self.clf_info,
                  hyps=self.hypotheses, seed=self.seed)
 
     def summarize_experiment(self):
@@ -217,21 +201,32 @@ class Pipeline(object):
 def argparser():
     parser = argparse.ArgumentParser(
         description='Main script for pyEA-ML pipeline.')
-    parser.add_argument('-m', '--matrix', default='design_matrix.arff',
-                        help="Optionally loads existing arff matrix")
+    parser.add_argument(
+        'run_folder', help='Directory where experiment is being run.')
+    parser.add_argument('data', help='VCF file annotated by ANNOVAR and EA, '
+                                     'or compressed sparse matrix.')
+    parser.add_argument(
+        'samples', help='Comma-delimited file with VCF sample '
+                        'IDs and corresponding disease status (0 or 1)')
+    parser.add_argument('gene_list',
+                        help='Single-column list of genes to test.')
+    parser.add_argument('-t', '--threads', type=int, default=1,
+                        help='Number of threads to run Weka on.')
+    parser.add_argument('-r', '--seed', type=int, default=111,
+                        help='Random seed for generating KFold samples.')
 
     args = parser.parse_args()
     return args
 
 
 def main():
-    args = argparser()  # parse console arguments
-    pipeline = Pipeline()
+    # parse console arguments
+    exp_dir, data, sample_f, gene_list, threads, seed = argparser()
 
     # either load existing design matrix or compute new one from VCF
-    if args.matrix:
-        pipeline.load_matrix(args.matrix)
-    else:
+    pipeline = Pipeline(exp_dir, data, sample_f, gene_list,
+                        threads=threads, seed=seed)
+    if not data.endswith('.npz'):
         pipeline.process_vcf()
     print('Feature matrix loaded.')
 
@@ -246,5 +241,5 @@ if __name__ == '__main__':
     start = time.time()
     main()
     end = time.time()
-    elapsed = str(datetime.timedelta(seconds=end-start))
+    elapsed = str(datetime.timedelta(seconds=end - start))
     print('Time elapsed: {}'.format(elapsed))

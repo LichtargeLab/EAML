@@ -130,8 +130,16 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
     for each gene, building a new classifier based on the training set, then
     evaluating the model on the test set and outputting the MCC to a
     dictionary.
+
+    Args:
+        design_matrix (DesignMatrix): The container with all feature and target
+            label data.
+        test_genes (list): The list of genes being tested.
+        n_workers (int): Number of workers to generate in multiprocessing Pool.
+        clf_info (DataFrame): Info about classifiers and their parameters.
+        hyps (list): EA/variant hypotheses being used as features.
+        seed (int): Random seed for generating KFold samples.
     """
-    gene_result_d = {}
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
     gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
@@ -151,4 +159,3 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
         pool.terminate()
         pool.join()
         sys.exit(1)
-    return gene_result_d
