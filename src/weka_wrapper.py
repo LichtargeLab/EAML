@@ -13,9 +13,7 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
-from weka.core.converters import ndarray_to_instances
-from weka.filters import Filter
-from weka.core.dataset import Instance
+from weka.core.dataset import Instance, Attribute, Instances
 
 
 def _init_worker(arr, clf_info, folds, hyps):
@@ -53,7 +51,6 @@ def _weka_worker(gene_split):
     for gene in genes:
         sub_matrix = data_matrix.get_genes([gene], hyps=hypotheses)
         col_names = sub_matrix.feature_labels
-        col_names.append('class')
         result_d = defaultdict(list)
         for i, (train, test) in enumerate(kfolds):
             # retrieve fold
@@ -63,8 +60,8 @@ def _weka_worker(gene_split):
             test_y = sub_matrix.y[test]
 
             # convert numpy arrays to arff format
-            train_arff = convert_array(train_X, train_y, gene, col_names)
-            test_arff = convert_array(test_X, test_y, gene, col_names)
+            train_arff = ndarray_to_instances(train_X, train_y, gene, col_names)
+            test_arff = ndarray_to_instances(test_X, test_y, gene, col_names)
 
             # run each classifier
             for row in clf_calls.itertuples():
@@ -89,40 +86,41 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def convert_array(X, y, gene, col_names):
+def ndarray_to_instances(X, y, relation, att_list):
     # reshape y and append to X
     labels = y.reshape((len(y), 1))
     data = np.append(X, labels, axis=1)
-    # convert to ARFF format
-    try:
-        arff = ndarray_to_instances(data, gene, att_list=col_names)
-    except TypeError as e:  # catches and logs any errors with Instance creation
-        with open('error.log', 'a+') as f:
-            error_idx = _instance_error_check(data)
-            f.write(f'Instance creation failed at {gene}, row {error_idx}\n')
-            f.write(f'{data[error_idx]}\n')
-            f.write(f'{e}\n')
-        raise e
 
-    # convert label attribute to nominal type
-    nominal = Filter(
-        classname='weka.filters.unsupervised.attribute.NumericToNominal',
-        options=['-R', 'last'])
-    nominal.inputformat(arff)
-    arff_reform = nominal.filter(arff)
-    arff_reform.class_is_last()
-    return arff_reform
+    if len(np.shape(data)) != 2:
+        raise Exception("Number of array dimensions must be 2!")
+    nrows, ncols = np.shape(data)
 
+    # header
+    atts = []
+    if len(att_list) + 1 != ncols:
+        raise Exception(f"Number columns and provided attribute names differ: "
+                        f"{ncols} != {len(att_list)}")
+    for name in att_list:
+        att = Attribute.create_numeric(name)
+        atts.append(att)
+    atts.append(Attribute.create_nominal('class', ['0', '1']))
+    arff = Instances.create_instances(relation, atts, nrows)
 
-def _instance_error_check(array):
-    rows = array.shape[0]
-    for i in range(rows):
+    # data
+    for i in range(nrows):
         try:
-            Instance.create_instance(array[i])
-        except TypeError:
-            print(f'Row index at error: {i}')
-            print(array[i])
-            return i
+            inst = Instance.create_instance(data[i])
+            arff.add_instance(inst)
+        except TypeError as e:  # catches and logs any errors with Instance gen.
+            with open('error.log', 'a+') as f:
+                print(f'Row index at error: {i}')
+                print(data[i])
+                f.write(f'Instance creation failed at {relation}, row {i}\n')
+                f.write(f'{data[i]}\n')
+                f.write(f'{e}\n')
+            raise e
+
+    return arff
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_info,
