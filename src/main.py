@@ -59,11 +59,10 @@ class Pipeline(object):
         # load feature and sample info
         sample_df = pd.read_csv(sample_f, header=None,
                                 dtype={0: str, 1: int})
-        sample_df.sort_values(by=0, inplace=True)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = sorted(list(
-            pd.read_csv(gene_list, header=None, squeeze=True)))
+        self.test_genes = list(pd.read_csv(gene_list, header=None,
+                                           squeeze=True))
         self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
