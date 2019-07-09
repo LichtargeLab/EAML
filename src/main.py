@@ -45,7 +45,7 @@ class Pipeline(object):
     """
     def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111):
         self.threads = threads
-        self.expdir = expdir
+        self.expdir = Path(expdir)
         self.data = data
         self.seed = seed
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
@@ -215,7 +215,8 @@ def argparser():
                         help='Random seed for generating KFold samples.')
 
     args = parser.parse_args()
-    return args
+    return (args.run_folder, args.data, args.samples, args.gene_list,
+            args.threads, args.seed)
 
 
 def main():

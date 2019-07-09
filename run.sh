@@ -49,7 +49,7 @@ USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
 # parse command line arguments
 seed=111
 threads=1
-while getopts ":he:d:s:g:n:r:m:o" opt; do
+while getopts ":he:d:s:g:t:r:" opt; do
     case ${opt} in
         h) echo "${USAGE}"
            exit 0;;
