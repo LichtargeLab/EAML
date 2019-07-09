@@ -76,7 +76,9 @@ class Pipeline(object):
 
         # load classifier information
         pipe_path = os.path.dirname(sys.argv[0])
-        self.clf_info = pd.read_csv(pipe_path + '/../classifiers.csv')
+        self.clf_info = pd.read_csv(
+            pipe_path + '/../classifiers.csv',
+            converters={'options': lambda x: x[1:-1].split(',')})
 
     def _convert_genes_to_hyp(self, hyps):
         """

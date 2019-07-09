@@ -62,6 +62,8 @@ def _weka_worker(gene_split):
             # convert numpy arrays to arff format
             train_arff = ndarray_to_instances(train_X, train_y, gene, col_names)
             test_arff = ndarray_to_instances(test_X, test_y, gene, col_names)
+            train_arff.class_is_last()
+            test_arff.class_is_last()
 
             # run each classifier
             for row in clf_calls.itertuples():
@@ -82,6 +84,7 @@ def _append_results(worker_file, gene, gene_results):
     """"Append gene's scores to worker file"""
     with open(worker_file, 'a+') as f:
         for clf, scores in gene_results.items():
+            scores = [str(score) for score in scores]
             row = ','.join([gene, clf] + scores)
             f.write(f'{row}\n')
 
