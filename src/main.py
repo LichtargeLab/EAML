@@ -169,6 +169,7 @@ class Pipeline(object):
         result_df = pd.concat(dfs, ignore_index=True)
         result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(10)]
         result_df['meanMCC'] = result_df.mean(axis=1)
+        result_df.set_index(['gene', 'classifier'], inplace=True)
         result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
         self.result_df = result_df
 
@@ -196,7 +197,8 @@ class Pipeline(object):
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
     def cleanup(self):
-        pass
+        for i in range(self.threads):
+            os.remove(f'worker-{i}.results.csv')
 
 
 def argparser():
@@ -237,6 +239,7 @@ def main():
     pipeline.summarize_experiment()
     pipeline.write_results()
     print('Gene scoring completed. Analysis summary in experiment directory.')
+    pipeline.cleanup()
 
 
 if __name__ == '__main__':
