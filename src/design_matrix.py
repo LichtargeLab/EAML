@@ -49,10 +49,9 @@ class DesignMatrix(object):
         id_idx = self._id_map[sample]
         self.X[id_idx, ft_idx] *= val
 
-    def get_genes(self, genes, hyps=None):
+    def get_gene(self, gene, hyps=None):
         if hyps:
-            col_names = ['_'.join([gene, hyp]) for hyp in hyps
-                         for gene in genes]
+            col_names = ['_'.join([gene, hyp]) for hyp in hyps]
             col_idxs = [self._ft_map[ft] for ft in col_names]
             return DesignMatrix(
                 self.X[:, col_idxs],
@@ -61,11 +60,11 @@ class DesignMatrix(object):
                 self.id_labels
             )
         else:
-            col_idxs = [self._ft_map[gene] for gene in genes]
+            col_idx = self._ft_map[gene]
             return DesignMatrix(
-                self.X[:, col_idxs],
+                self.X[:, col_idx],
                 self.y,
-                [self.feature_labels[idx] for idx in col_idxs],
+                self.feature_labels[col_idx],
                 self.id_labels
             )
 
@@ -78,3 +77,37 @@ class DesignMatrix(object):
         """
         sp_matrix = csr_matrix(self.X)
         save_npz(f_out, sp_matrix)
+
+    def write_arff(self, f_out, gene=None, row_idxs=None, hyps=None):
+        """
+            Outputs an .arff file corresponding to the DesignMatrix object.
+
+            Args:
+                f_out (str/Path): The filepath for the output
+                gene (str, optional): Gene to subset from matrix.
+                row_idxs (ndarray, optional): Specifies specific samples to
+                    write to output.
+                hyps (list): EA/variant hypotheses being used as features.
+            """
+        def _write_rows(examples):
+            for example, label in examples:
+                example = [str(x) for x in example]
+                example.append(str(label))
+                f.write(','.join(example) + '\n')
+
+        if gene:
+            matrix = self.get_gene(gene=gene, hyps=hyps)
+        else:
+            matrix = self
+        with open(f_out, 'w') as f:
+            relation = str(f_out).split('/')[-1].split('.')[0]
+            f.write(f'@relation {relation}\n')
+            for ft in matrix.feature_labels:
+                f.write(f'@attribute {ft} REAL\n')
+            f.write('@attribute class {0,1}\n')
+            f.write('@data\n')
+            if row_idxs is not None:
+                rows = zip(matrix.X[row_idxs, :], matrix.y[row_idxs])
+            else:
+                rows = zip(matrix.X, matrix.y)
+            _write_rows(rows)

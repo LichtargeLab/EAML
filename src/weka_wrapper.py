@@ -6,6 +6,7 @@ Created on 2019-04-17
 """
 import signal
 import sys
+import os
 from collections import defaultdict
 from multiprocessing import Pool
 
@@ -13,23 +14,20 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
-from weka.core.dataset import Instance, Attribute, Instances
+from weka.core.converters import Loader
 
 
-def _init_worker(arr, clf_info, folds, hyps):
+def _init_worker(clf_info, folds, hyps):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
 
     Args:
-        arr (DesignMatrix): The DesignMatrix object containing the feature data.
         clf_info (DataFrame): DataFrame of Weka classifiers, their Weka
             object names, and hyperparameters.
         folds (list): Train/test indices for kfolds.
         hyps (list): The hypotheses for fetching features.
     """
-    global data_matrix
-    data_matrix = arr
     global clf_calls
     clf_calls = clf_info
     global kfolds
@@ -48,20 +46,17 @@ def _weka_worker(gene_split):
     """
     wrk_idx, genes = gene_split
     jvm.start(bundled=False)
+    n_genes = len(genes)
+    n_done = 0
     for gene in genes:
-        sub_matrix = data_matrix.get_genes([gene], hyps=hypotheses)
-        col_names = sub_matrix.feature_labels
         result_d = defaultdict(list)
-        for i, (train, test) in enumerate(kfolds):
-            # retrieve fold
-            train_X = sub_matrix.X[train, :]
-            train_y = sub_matrix.y[train]
-            test_X = sub_matrix.X[test, :]
-            test_y = sub_matrix.y[test]
-
-            # convert numpy arrays to arff format
-            train_arff = ndarray_to_instances(train_X, train_y, gene, col_names)
-            test_arff = ndarray_to_instances(test_X, test_y, gene, col_names)
+        for i in range(10):
+            # load train and test arffs
+            train = str(f'arffs/{gene}_{i}-train.arff')
+            test = str(f'arffs/{gene}_{i}-test.arff')
+            loader = Loader(classname='weka.core.converters.ArffLoader')
+            train_arff = loader.load_file(train)
+            test_arff = loader.load_file(test)
             train_arff.class_is_last()
             test_arff.class_is_last()
 
@@ -77,6 +72,10 @@ def _weka_worker(gene_split):
                     mcc = 0
                 result_d[clf].append(mcc)
         _append_results(f'worker-{wrk_idx}.results.csv', gene, result_d)
+        n_done += 1
+        if n_done % 100 == 0:
+            print(f'Worker {wrk_idx}: {n_done} / {n_genes}')
+    print(f'Worker {wrk_idx} complete.')
     jvm.stop()
 
 
@@ -89,41 +88,15 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def ndarray_to_instances(X, y, relation, att_list):
-    # reshape y and append to X
-    labels = y.reshape((len(y), 1))
-    data = np.append(X, labels, axis=1)
-
-    if len(np.shape(data)) != 2:
-        raise Exception("Number of array dimensions must be 2!")
-    nrows, ncols = np.shape(data)
-
-    # header
-    atts = []
-    if len(att_list) + 1 != ncols:
-        raise Exception(f"Number columns and provided attribute names differ: "
-                        f"{ncols} != {len(att_list)}")
-    for name in att_list:
-        att = Attribute.create_numeric(name)
-        atts.append(att)
-    atts.append(Attribute.create_nominal('class', ['0', '1']))
-    arff = Instances.create_instances(relation, atts, nrows)
-
-    # data
-    for i in range(nrows):
-        try:
-            inst = Instance.create_instance(data[i])
-            arff.add_instance(inst)
-        except TypeError as e:  # catches and logs any errors with Instance gen.
-            with open('error.log', 'a+') as f:
-                print(f'Row index at error: {i}')
-                print(data[i])
-                f.write(f'Instance creation failed at {relation}, row {i}\n')
-                f.write(f'{data[i]}\n')
-                f.write(f'{e}\n')
-            raise e
-
-    return arff
+def split_matrix(folds, design_matrix, test_genes, hyps=None):
+    if not os.path.exists('arffs/'):
+        os.mkdir('arffs')
+    for i, (train, test) in enumerate(folds):
+        for gene in test_genes:
+            design_matrix.write_arff(f'arffs/{gene}_{i}-train.arff', gene=gene,
+                                     row_idxs=train, hyps=hyps)
+            design_matrix.write_arff(f'arffs/{gene}_{i}-test.arff', gene=gene,
+                                     row_idxs=test, hyps=hyps)
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_info,
@@ -149,8 +122,10 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
     # generate KFold groups for samples
     kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
     splits = list(kf.split(design_matrix.X, design_matrix.y))
+    # write intermediate train/test arff files for each gene & fold
+    split_matrix(splits, design_matrix, test_genes, hyps=hyps)
     # these are set as globals in the worker initializer
-    global_args = [design_matrix, clf_info, splits, hyps]
+    global_args = [clf_info, splits, hyps]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
                 maxtasksperchild=1)
     try:

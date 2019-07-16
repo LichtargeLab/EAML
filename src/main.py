@@ -10,6 +10,7 @@ Main script for EA-ML pipeline.
 """
 import datetime
 import os
+import shutil
 import sys
 import time
 from collections import OrderedDict
@@ -199,6 +200,7 @@ class Pipeline(object):
     def cleanup(self):
         for i in range(self.threads):
             os.remove(f'worker-{i}.results.csv')
+        shutil.rmtree('arffs/')
 
 
 def argparser():
