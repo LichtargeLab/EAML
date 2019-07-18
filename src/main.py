@@ -194,7 +194,7 @@ class Pipeline(object):
         # fetch maxMCC for each gene and write final rankings file
         max_vals = mean_df.max(axis=1)
         final_df = pd.DataFrame({'gene': genes, 'maxMCC': max_vals})
-        final_df.sort_values('maxMCC', ascending=False)
+        final_df.sort_values('maxMCC', ascending=False, inplace=True)
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
     def cleanup(self):
