@@ -44,11 +44,13 @@ class Pipeline(object):
         clf_info (DataFrame): A DataFrame mapping classifier names to their
             corresponding Weka object names and hyperparameters.
     """
-    def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111):
+    def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111,
+                 kfolds=10):
         self.threads = threads
         self.expdir = Path(expdir)
         self.data = data
         self.seed = seed
+        self.kfolds = kfolds
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
         # import tabix-indexed file if possible
@@ -161,7 +163,7 @@ class Pipeline(object):
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
         run_weka(self.matrix, self.test_genes, self.threads, self.clf_info,
-                 hyps=self.hypotheses, seed=self.seed)
+                 hyps=self.hypotheses, seed=self.seed, n_splits=self.kfolds)
 
     def summarize_experiment(self):
         """Combines results from Weka experiment files."""
@@ -219,15 +221,17 @@ def argparser():
                         help='Number of threads to run Weka on.')
     parser.add_argument('-r', '--seed', type=int, default=111,
                         help='Random seed for generating KFold samples.')
+    parser.add_argument('-k', '--kfolds', type=int, default=10,
+                        help='Number of folds for cross-validation.')
 
     args = parser.parse_args()
     return (args.run_folder, args.data, args.samples, args.gene_list,
-            args.threads, args.seed)
+            args.threads, args.seed, args.kfolds)
 
 
 def main():
     # parse console arguments
-    exp_dir, data, sample_f, gene_list, threads, seed = argparser()
+    exp_dir, data, sample_f, gene_list, threads, seed, kfolds = argparser()
 
     # either load existing design matrix or compute new one from VCF
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list,

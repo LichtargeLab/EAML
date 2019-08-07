@@ -100,7 +100,7 @@ def split_matrix(folds, design_matrix, test_genes, hyps=None):
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_info,
-             hyps=None, seed=111):
+             hyps=None, seed=111, n_splits=10):
     """
     The overall Weka experiment. The steps include loading the K .arff files
     for each gene, building a new classifier based on the training set, then
@@ -120,7 +120,7 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
     # split genes into chunks by number of workers
     gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
     # generate KFold groups for samples
-    kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
+    kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     splits = list(kf.split(design_matrix.X, design_matrix.y))
     # write intermediate train/test arff files for each gene & fold
     split_matrix(splits, design_matrix, test_genes, hyps=hyps)

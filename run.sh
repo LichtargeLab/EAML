@@ -43,13 +43,15 @@ USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
         Optional arguments:
            -t <int>             number of threads for Weka to use
            -r <int>             random seed for KFold sampling
+           -k <int>             number of KFold samples (1 = leave-one-out)
            -h                   Display this help message.
        "
 
 # parse command line arguments
 seed=111
 threads=1
-while getopts ":he:d:s:g:t:r:" opt; do
+cv=10
+while getopts ":he:d:s:g:t:r:k:" opt; do
     case ${opt} in
         h) echo "${USAGE}"
            exit 0;;
@@ -59,6 +61,7 @@ while getopts ":he:d:s:g:t:r:" opt; do
         g) genelist=$OPTARG;;
         t) threads=$OPTARG;;
         r) seed=$OPTARG;;
+        k) cv=$OPTARG;;
         \?) echo "Invalid Option: -$OPTARG" 1>&2
             echo "${USAGE}"
             exit 1;;
@@ -70,4 +73,4 @@ shift $((OPTIND -1))
 
 # run pipeline
 cd ${exp_dir}
-python ${repSource}/src/main.py ${exp_dir} ${data} ${samples} ${genelist} -t ${threads} -r ${seed}
+python ${repSource}/src/main.py ${exp_dir} ${data} ${samples} ${genelist} -t ${threads} -r ${seed} -k ${cv}
