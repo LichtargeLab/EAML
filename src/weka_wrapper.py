@@ -50,7 +50,7 @@ def _weka_worker(gene_split):
     n_done = 0
     for gene in genes:
         result_d = defaultdict(list)
-        for i in range(10):
+        for i in range(len(kfolds)):
             # load train and test arffs
             train = str(f'arffs/{gene}_{i}-train.arff')
             test = str(f'arffs/{gene}_{i}-test.arff')
@@ -115,6 +115,7 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
         clf_info (DataFrame): Info about classifiers and their parameters.
         hyps (list): EA/variant hypotheses being used as features.
         seed (int): Random seed for generating KFold samples.
+        n_splits (int): Number of folds for cross-validation.
     """
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
