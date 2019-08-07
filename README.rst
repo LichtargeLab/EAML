@@ -20,18 +20,27 @@ Usage
 The run.sh script will install the required virtual environment and
 dependencies.
 To run the pipeline from start to finish::
+
     cd <experiment folder>
     chmod +x pyEA-ML/run.sh
-    pyEA-ML/run.sh
-        -e <experiment_folder>
-        -d <data>
-        -s <sample_file>
-        -g <gene_list>
-        -n <nb_cores>
-        -r <random_seed>
+    pyEA-ML/run.sh [options]
 
-If a .env file already exists within your experiment folder, no input arguments
-are necessary as long as you run from the experiment folder.
+Required arguments:
+    -e <directory>       experiment directory
+    -d <file>            VCF or .npz matrix
+    -s <file>            two-column CSV with sample IDs and disease status
+    -g <file>            single-column list of genes
+
+Optional arguments:
+    -t <int>             number of threads for Weka to use
+    -r <int>             random seed for KFold sampling
+    -h                   display help message.
+    -k <int>             number of folds for K-fold cross validation
+
+                         *Note: Specifying a KFold option of 1 indicates
+                         leave-one-out analysis.*
+
+
 
 Expanded Usage
 ####################
@@ -68,12 +77,13 @@ In order to use this pipeline properly it requires 3 input files:
 The VCF file should follow proper formatting as described
 `here <https://samtools.github.io/hts-specs/VCFv4.2.pdf>`_. Additionally, some
 extra information is required:
-    * 'gene' and 'EA' annotations as fields in the INFO column
-    * Different fields in INFO and FORMAT columns should be defined in the
-      header, with type information
-    * 'EA' attribute must be typed as a 'String' (Type=String), this is because
-      of the way EA labels variants by transcript, and other variant annotation
-      softwares do this on a variant-wise basis instead
+
+* 'gene' and 'EA' annotations as fields in the INFO column
+* Different fields in INFO and FORMAT columns should be defined in the
+  header, with type information
+* 'EA' attribute must be typed as a 'String' (Type=String), this is because
+  of the way EA labels variants by transcript, and other variant annotation
+  softwares do this on a variant-wise basis instead
 
 Software Requirements
 ----------------------
