@@ -172,7 +172,10 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
                 maxtasksperchild=1)
     try:
-        pool.map(_weka_worker, gene_splits)
+        if n_splits == len(design_matrix):
+            pool.map(_loo_worker, gene_splits)
+        else:
+            pool.map(_weka_worker, gene_splits)
         pool.close()
         pool.join()
     except KeyboardInterrupt:
