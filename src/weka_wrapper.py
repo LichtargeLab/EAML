@@ -15,10 +15,11 @@ from sklearn.model_selection import StratifiedKFold
 import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
 from weka.core.converters import Loader
+from weka.core.classes import Random
 
 
 # noinspection PyGlobalUndefined
-def _init_worker(clf_info, n_splits, hyps):
+def _init_worker(clf_info, n_splits, hyps, seed=111):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
@@ -28,6 +29,7 @@ def _init_worker(clf_info, n_splits, hyps):
             object names, and hyperparameters.
         n_splits (int): Number of splits used for cross-validation.
         hyps (list): The hypotheses for fetching features.
+        seed (int): The random seed used for sampling.
     """
     global clf_calls
     clf_calls = clf_info
@@ -35,6 +37,8 @@ def _init_worker(clf_info, n_splits, hyps):
     n_folds = n_splits
     global hypotheses
     hypotheses = hyps
+    global rseed
+    rseed = seed
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
@@ -81,7 +85,35 @@ def _weka_worker(gene_split):
 
 
 def _loo_worker(gene_split):
-    pass
+    wrk_idx, genes = gene_split
+    jvm.start(bundled=False)
+    n_genes = len(genes)
+    n_done = 0
+    for gene in genes:
+        result_d = {}
+        loader = Loader(classname='weka.core.converters.ArffLoader')
+        arff = loader.load_file(f'arffs/{gene}.arff')
+        arff.class_is_last()
+        # run each classifier
+        for row in clf_calls.itertuples():
+            _, clf, clf_str, opts = row
+            clf_obj = Classifier(classname=clf_str, options=opts)
+            evl = Evaluation(arff)
+            evl.crossvalidate_model(clf_obj, arff, n_folds, Random(rseed))
+            mcc = evl.matthews_correlation_coefficient(1)
+            if np.isnan(mcc):
+                mcc = 0
+            tp = evl.num_true_positives(1)
+            fp = evl.num_false_positives(1)
+            fn = evl.num_false_negatives(1)
+            tn = evl.num_true_negatives(1)
+            result_d[clf] = (tp, tn, fp, fn, mcc)
+        _append_results(f'worker-{wrk_idx}.results.csv', gene, result_d)
+        n_done += 1
+        if n_done % 100 == 0:
+            print(f'Worker {wrk_idx}: {n_done} / {n_genes}')
+    print(f'Worker {wrk_idx} complete.')
+    jvm.stop()
 
 
 def _append_results(worker_file, gene, gene_results):
