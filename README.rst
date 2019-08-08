@@ -37,10 +37,9 @@ Optional arguments:
     -h                   display help message.
     -k <int>             number of folds for K-fold cross validation
 
-                         *Note: Specifying a KFold option of 1 indicates
-                         leave-one-out analysis.*
-
-
+                         *Note: To specify leave-one-out validation, set the
+                         number of folds equal to the number of samples in the
+                         dataset.*
 
 Expanded Usage
 ####################

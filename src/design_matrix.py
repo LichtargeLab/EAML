@@ -36,6 +36,9 @@ class DesignMatrix(object):
                                    enumerate(feature_labels))
         self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
 
+    def __len__(self):
+        return self.X.shape[0]
+
     def update(self, val, ft_label, sample):
         """
         Updates a specific cell in the X matrix.

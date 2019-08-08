@@ -17,7 +17,8 @@ from weka.classifiers import Classifier, Evaluation
 from weka.core.converters import Loader
 
 
-def _init_worker(clf_info, folds, hyps):
+# noinspection PyGlobalUndefined
+def _init_worker(clf_info, n_splits, hyps):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
@@ -25,13 +26,13 @@ def _init_worker(clf_info, folds, hyps):
     Args:
         clf_info (DataFrame): DataFrame of Weka classifiers, their Weka
             object names, and hyperparameters.
-        folds (list): Train/test indices for kfolds.
+        n_splits (int): Number of splits used for cross-validation.
         hyps (list): The hypotheses for fetching features.
     """
     global clf_calls
     clf_calls = clf_info
-    global kfolds
-    kfolds = folds
+    global n_folds
+    n_folds = n_splits
     global hypotheses
     hypotheses = hyps
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -50,7 +51,7 @@ def _weka_worker(gene_split):
     n_done = 0
     for gene in genes:
         result_d = defaultdict(list)
-        for i in range(len(kfolds)):
+        for i in range(n_folds):
             # load train and test arffs
             train = str(f'arffs/{gene}_{i}-train.arff')
             test = str(f'arffs/{gene}_{i}-test.arff')
@@ -79,6 +80,10 @@ def _weka_worker(gene_split):
     jvm.stop()
 
 
+def _loo_worker(gene_split):
+    pass
+
+
 def _append_results(worker_file, gene, gene_results):
     """"Append gene's scores to worker file"""
     with open(worker_file, 'a+') as f:
@@ -88,15 +93,22 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def split_matrix(folds, design_matrix, test_genes, hyps=None):
+def split_matrix(design_matrix, test_genes, hyps=None, seed=111, n_splits=10):
     if not os.path.exists('arffs/'):
         os.mkdir('arffs')
-    for i, (train, test) in enumerate(folds):
-        for gene in test_genes:
-            design_matrix.write_arff(f'arffs/{gene}_{i}-train.arff', gene=gene,
-                                     row_idxs=train, hyps=hyps)
-            design_matrix.write_arff(f'arffs/{gene}_{i}-test.arff', gene=gene,
-                                     row_idxs=test, hyps=hyps)
+    # generate KFold groups for samples
+    kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    splits = list(kf.split(design_matrix.X, design_matrix.y))
+
+    for gene in test_genes:
+        if n_splits == len(design_matrix):
+            design_matrix.write_arff(f'arffs/{gene}.arff', gene=gene, hyps=hyps)
+        else:
+            for i, (train, test) in enumerate(splits):
+                design_matrix.write_arff(f'arffs/{gene}_{i}-train.arff',
+                                         gene=gene, row_idxs=train, hyps=hyps)
+                design_matrix.write_arff(f'arffs/{gene}_{i}-test.arff',
+                                         gene=gene, row_idxs=test, hyps=hyps)
 
 
 def run_weka(design_matrix, test_genes, n_workers, clf_info,
@@ -120,13 +132,11 @@ def run_weka(design_matrix, test_genes, n_workers, clf_info,
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
     gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
-    # generate KFold groups for samples
-    kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-    splits = list(kf.split(design_matrix.X, design_matrix.y))
-    # write intermediate train/test arff files for each gene & fold
-    split_matrix(splits, design_matrix, test_genes, hyps=hyps)
+    # write intermediate train/test arff files for each CV fold and/or gene
+    split_matrix(design_matrix, test_genes, hyps=hyps, seed=seed,
+                 n_splits=n_splits)
     # these are set as globals in the worker initializer
-    global_args = [clf_info, splits, hyps]
+    global_args = [clf_info, n_splits, hyps]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
                 maxtasksperchild=1)
     try:
