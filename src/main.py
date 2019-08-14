@@ -43,6 +43,7 @@ class Pipeline(object):
         result_df (pd.DataFrame): The DataFrame that stores experiment results
         clf_info (DataFrame): A DataFrame mapping classifier names to their
             corresponding Weka object names and hyperparameters.
+        kfolds (int): Number of folds for cross-validation.
     """
     def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111,
                  kfolds=10):
@@ -170,23 +171,29 @@ class Pipeline(object):
         worker_files = Path('.').glob('worker-*.results.csv')
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
-        result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(10)]
-        result_df['meanMCC'] = result_df.mean(axis=1)
+        if self.kfolds == len(self.samples):
+            result_df.columns = ['gene', 'classifier', 'TP', 'FP', 'FN', 'TN',
+                                 'MCC']
+        else:
+            result_df.columns = ['gene', 'classifier'] + \
+                                [str(i) for i in range(self.kfolds)]
+            result_df['meanMCC'] = result_df.mean(axis=1)
         result_df.set_index(['gene', 'classifier'], inplace=True)
         result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
         self.result_df = result_df
 
     def write_results(self):
-        genes = [k for k in OrderedDict.fromkeys(
-            self.result_df.index.get_level_values('gene')).keys()]
-        clfs = set(self.result_df.index.get_level_values('classifier'))
-        clf_d = OrderedDict([('gene', list(genes))])
+        clf_d = OrderedDict([('gene', self.test_genes)])
 
         # write summary file for each classifier
-        for clf in clfs:
+        for clf in self.clf_info['classifier']:
             clf_df = self.result_df.xs(clf, level='classifier')
             clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
-            clf_d[clf] = list(clf_df['meanMCC'])
+            if self.kfolds == len(self.samples):
+                # if LOO, only a single MCC is present per gene
+                clf_d[clf] = list(clf_df['MCC'])
+            else:
+                clf_d[clf] = list(clf_df['meanMCC'])
 
         # aggregate meanMCCs from each classifier
         mean_df = pd.DataFrame.from_dict(clf_d)
@@ -195,7 +202,7 @@ class Pipeline(object):
 
         # fetch maxMCC for each gene and write final rankings file
         max_vals = mean_df.max(axis=1)
-        final_df = pd.DataFrame({'gene': genes, 'maxMCC': max_vals})
+        final_df = pd.DataFrame({'gene': self.test_genes, 'maxMCC': max_vals})
         final_df.sort_values('maxMCC', ascending=False, inplace=True)
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
@@ -235,7 +242,7 @@ def main():
 
     # either load existing design matrix or compute new one from VCF
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list,
-                        threads=threads, seed=seed)
+                        threads=threads, seed=seed, kfolds=kfolds)
     if not data.endswith('.npz'):
         pipeline.process_vcf()
     print('Feature matrix loaded.')
