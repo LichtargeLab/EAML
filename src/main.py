@@ -172,7 +172,7 @@ class Pipeline(object):
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
         if self.kfolds == len(self.samples):
-            result_df.columns = ['gene', 'classifier', 'TP', 'FP', 'FN', 'TN',
+            result_df.columns = ['gene', 'classifier', 'TP', 'TN', 'FP', 'FN',
                                  'MCC']
         else:
             result_df.columns = ['gene', 'classifier'] + \

@@ -104,9 +104,9 @@ def _loo_worker(gene_split):
             if np.isnan(mcc):
                 mcc = 0
             tp = evl.num_true_positives(1)
+            tn = evl.num_true_negatives(1)
             fp = evl.num_false_positives(1)
             fn = evl.num_false_negatives(1)
-            tn = evl.num_true_negatives(1)
             result_d[clf] = (tp, tn, fp, fn, mcc)
         _append_results(f'worker-{wrk_idx}.results.csv', gene, result_d)
         n_done += 1
@@ -129,13 +129,13 @@ def split_matrix(design_matrix, test_genes, hyps=None, seed=111, n_splits=10):
     if not os.path.exists('arffs/'):
         os.mkdir('arffs')
     # generate KFold groups for samples
-    kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-    splits = list(kf.split(design_matrix.X, design_matrix.y))
-
-    for gene in test_genes:
-        if n_splits == len(design_matrix):
+    if n_splits == len(design_matrix):
+        for gene in test_genes:
             design_matrix.write_arff(f'arffs/{gene}.arff', gene=gene, hyps=hyps)
-        else:
+    else:
+        kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+        splits = list(kf.split(design_matrix.X, design_matrix.y))
+        for gene in test_genes:
             for i, (train, test) in enumerate(splits):
                 design_matrix.write_arff(f'arffs/{gene}_{i}-train.arff',
                                          gene=gene, row_idxs=train, hyps=hyps)

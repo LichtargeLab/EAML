@@ -43,7 +43,7 @@ USAGE="Usage:  pyEA-ML/run.sh [-h] <required> <optional>
         Optional arguments:
            -t <int>             number of threads for Weka to use
            -r <int>             random seed for KFold sampling
-           -k <int>             number of KFold samples (1 = leave-one-out)
+           -k <int>             number of KFold samples
            -h                   Display this help message.
        "
 
