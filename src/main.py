@@ -83,6 +83,9 @@ class Pipeline(object):
         self.clf_info = pd.read_csv(
             pipe_path + '/../classifiers.csv',
             converters={'options': lambda x: x[1:-1].split(',')})
+        # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
+        if self.kfolds == len(self.samples):
+            self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
     def _convert_genes_to_hyp(self, hyps):
         """
