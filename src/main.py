@@ -62,11 +62,11 @@ class Pipeline(object):
 
         # load feature and sample info
         sample_df = pd.read_csv(sample_f, header=None,
-                                dtype={0: str, 1: int})
+                                dtype={0: str, 1: int}).sort_values(0)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = list(pd.read_csv(gene_list, header=None,
-                                           squeeze=True))
+        self.test_genes = sorted(list(
+            pd.read_csv(gene_list, header=None, squeeze=True)))
         self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
@@ -181,6 +181,7 @@ class Pipeline(object):
             result_df.columns = ['gene', 'classifier'] + \
                                 [str(i) for i in range(self.kfolds)]
             result_df['meanMCC'] = result_df.mean(axis=1)
+        result_df.sort_values('gene', inplace=True)
         result_df.set_index(['gene', 'classifier'], inplace=True)
         result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
         self.result_df = result_df
