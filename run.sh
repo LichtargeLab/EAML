@@ -23,11 +23,11 @@ ENV_NAME='pyEA-ML'
 
 ENVS=$(conda env list | awk '{print $1}' )
 if [[ ${ENVS} = *${ENV_NAME}* ]]; then
-   source activate ${ENV_NAME}
+   conda activate ${ENV_NAME}
 else
     # make virtual environment
     conda env create -f ${repSource}/environment.yml
-    source activate ${ENV_NAME}
+    conda activate ${ENV_NAME}
 fi
 export JAVA_HOME=${CONDA_PREFIX}/jre
 export PATH=${JAVA_HOME}/bin:$PATH
@@ -72,5 +72,4 @@ done
 shift $((OPTIND -1))
 
 # run pipeline
-cd ${exp_dir}
 python ${repSource}/src/main.py ${exp_dir} ${data} ${samples} ${genelist} -t ${threads} -r ${seed} -k ${cv}
