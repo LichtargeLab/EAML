@@ -18,8 +18,7 @@ class DesignMatrix(object):
 
     Args:
         X (ndarray): The 2D data matrix
-        y (ndarray): 1D array of disease status labels corresponding to each
-            sample
+        y (ndarray): 1D array of disease status labels corresponding to each sample
         feature_labels (list): The names for each column in X
         id_labels (Series): The list of names for each sample
 
@@ -32,8 +31,7 @@ class DesignMatrix(object):
         self.id_labels = id_labels
         self.X = X
         self.y = y
-        self._ft_map = OrderedDict((feature, i) for i, feature in
-                                   enumerate(feature_labels))
+        self._ft_map = OrderedDict((feature, i) for i, feature in enumerate(feature_labels))
         self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
 
     def __len__(self):
@@ -76,7 +74,7 @@ class DesignMatrix(object):
         Writes X matrix out as compressed sparse matrix in .npz format.
 
         Args:
-            f_out (str): Filepath to save compressed matrix to.
+            f_out (Path): Filepath to save compressed matrix to.
         """
         sp_matrix = csr_matrix(self.X)
         save_npz(f_out, sp_matrix)
@@ -86,10 +84,9 @@ class DesignMatrix(object):
             Outputs an .arff file corresponding to the DesignMatrix object.
 
             Args:
-                f_out (str/Path): The filepath for the output
+                f_out (Path): The filepath for the output
                 gene (str, optional): Gene to subset from matrix.
-                row_idxs (ndarray, optional): Specifies specific samples to
-                    write to output.
+                row_idxs (ndarray, optional): Specifies specific samples to write to output.
                 hyps (list): EA/variant hypotheses being used as features.
             """
         def _write_rows(examples):
@@ -103,7 +100,7 @@ class DesignMatrix(object):
         else:
             matrix = self
         with open(f_out, 'w') as f:
-            relation = str(f_out).split('/')[-1].split('.')[0]
+            relation = f_out.stem
             f.write(f'@relation {relation}\n')
             for ft in matrix.feature_labels:
                 f.write(f'@attribute {ft} REAL\n')

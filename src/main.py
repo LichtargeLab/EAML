@@ -38,35 +38,32 @@ class Pipeline(object):
         targets (np.ndarray): Array of target labels for training/prediction
         samples (list): List of samples to test
         test_genes (list): list of genes to test
-        matrix (DesignMatrix): Object for containing feature information for
-            each gene and sample.
+        matrix (DesignMatrix): Object for containing feature information for each gene and sample.
         result_df (pd.DataFrame): The DataFrame that stores experiment results
-        clf_info (DataFrame): A DataFrame mapping classifier names to their
-            corresponding Weka object names and hyperparameters.
+        clf_info (DataFrame): A DataFrame mapping classifier names to their corresponding Weka object names and
+            hyperparameters.
         kfolds (int): Number of folds for cross-validation.
     """
     def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111,
                  kfolds=10):
         self.threads = threads
-        self.expdir = Path(expdir)
+        self.expdir = expdir
         self.data = data
         self.seed = seed
         self.kfolds = kfolds
         self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
 
         # import tabix-indexed file if possible
-        if os.path.exists(self.data + '.tbi'):
-            self.tabix = self.data + '.tbi'
+        if os.path.exists(str(self.data) + '.tbi'):
+            self.tabix = Path(str(self.data) + '.tbi')
         else:
             self.tabix = None
 
         # load feature and sample info
-        sample_df = pd.read_csv(sample_f, header=None,
-                                dtype={0: str, 1: int}).sort_values(0)
+        sample_df = pd.read_csv(sample_f, header=None, dtype={0: str, 1: int}).sort_values(0)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = sorted(list(
-            pd.read_csv(gene_list, header=None, squeeze=True)))
+        self.test_genes = sorted(list(pd.read_csv(gene_list, header=None, squeeze=True)))
         self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
@@ -74,15 +71,13 @@ class Pipeline(object):
             arr = utils.load_matrix(self.data)
         else:
             arr = np.ones((len(self.samples), len(self._ft_labels)))
-        self.matrix = DesignMatrix(arr, self.targets, self._ft_labels,
-                                   self.samples)
+        self.matrix = DesignMatrix(arr, self.targets, self._ft_labels, self.samples)
         self.result_df = None
 
         # load classifier information
         pipe_path = os.path.dirname(sys.argv[0])
-        self.clf_info = pd.read_csv(
-            pipe_path + '/../classifiers.csv',
-            converters={'options': lambda x: x[1:-1].split(',')})
+        self.clf_info = pd.read_csv(pipe_path + '/../classifiers.csv',
+                                    converters={'options': lambda x: x[1:-1].split(',')})
         # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
         if self.kfolds == len(self.samples):
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
@@ -107,8 +102,8 @@ class Pipeline(object):
 
         Args:
             vcf (VariantFile): A VariantFile object
-            contig (str): A specific contig/chromosome to fetch from the
-                VCF. If None, will iterate through the entire VCF file.
+            contig (str): A specific contig/chromosome to fetch from the VCF. If None, will iterate through the entire
+                VCF file.
         """
         for rec in vcf.fetch(contig=contig):
             gene = rec.info['gene']
@@ -122,10 +117,8 @@ class Pipeline(object):
                 elif len(score) == 1:
                     g_ea_zip = list(zip(gene, score * len(gene)))
                 else:
-                    raise ValueError("Length of EA tuple doesn't match "
-                                     "expected sizes.")
-                g_ea_match = [(g, ea) for g, ea in g_ea_zip if g in
-                              self.test_genes]
+                    raise ValueError("Length of EA tuple doesn't match expected sizes.")
+                g_ea_match = [(g, ea) for g, ea in g_ea_zip if g in self.test_genes]
                 if not g_ea_match:
                     continue
             else:
@@ -137,8 +130,7 @@ class Pipeline(object):
                 try:
                     gt = rec.samples[sample]['GT']
                 except (IndexError, KeyError):
-                    raise KeyError("Sample ID {} doesn't exists in "
-                                   "VCF.".format(sample))
+                    raise KeyError("Sample ID {} doesn't exists in VCF.".format(sample))
                 zygo = utils.convert_zygo(gt)
                 if zygo == 0:
                     continue
@@ -146,9 +138,7 @@ class Pipeline(object):
                     if ea is not None:
                         for hyp in self.hypotheses:
                             if utils.check_hyp(zygo, ea, hyp):
-                                self.matrix.update(
-                                    utils.neg_pEA(ea, zygo),
-                                    '_'.join([g, hyp]), sample)
+                                self.matrix.update(utils.neg_pEA(ea, zygo), '_'.join([g, hyp]), sample)
 
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
@@ -166,20 +156,18 @@ class Pipeline(object):
 
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
-        run_weka(self.matrix, self.test_genes, self.threads, self.clf_info,
-                 hyps=self.hypotheses, seed=self.seed, n_splits=self.kfolds)
+        run_weka(self.expdir, self.matrix, self.test_genes, self.threads, self.clf_info, hyps=self.hypotheses,
+                 seed=self.seed, n_splits=self.kfolds)
 
     def summarize_experiment(self):
         """Combines results from Weka experiment files."""
-        worker_files = Path('.').glob('worker-*.results.csv')
+        worker_files = self.expdir.glob('worker-*.results.csv')
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
         if self.kfolds == len(self.samples):
-            result_df.columns = ['gene', 'classifier', 'TP', 'TN', 'FP', 'FN',
-                                 'MCC']
+            result_df.columns = ['gene', 'classifier', 'TP', 'TN', 'FP', 'FN', 'MCC']
         else:
-            result_df.columns = ['gene', 'classifier'] + \
-                                [str(i) for i in range(self.kfolds)]
+            result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(self.kfolds)]
             result_df['meanMCC'] = result_df.mean(axis=1)
         result_df.sort_values('gene', inplace=True)
         result_df.set_index(['gene', 'classifier'], inplace=True)
@@ -201,8 +189,7 @@ class Pipeline(object):
 
         # aggregate meanMCCs from each classifier
         mean_df = pd.DataFrame.from_dict(clf_d)
-        mean_df.to_csv(self.expdir / 'all-classifier_summary.csv',
-                       index=False)
+        mean_df.to_csv(self.expdir / 'all-classifier_summary.csv', index=False)
 
         # fetch maxMCC for each gene and write final rankings file
         max_vals = mean_df.max(axis=1)
@@ -212,32 +199,23 @@ class Pipeline(object):
 
     def cleanup(self):
         for i in range(self.threads):
-            os.remove(f'worker-{i}.results.csv')
-        shutil.rmtree('arffs/')
+            os.remove(self.expdir / f'worker-{i}.results.csv')
+        shutil.rmtree(self.expdir / 'arffs/')
 
 
 def argparser():
-    parser = argparse.ArgumentParser(
-        description='Main script for pyEA-ML pipeline.')
-    parser.add_argument(
-        'run_folder', help='Directory where experiment is being run.')
-    parser.add_argument('data', help='VCF file annotated by ANNOVAR and EA, '
-                                     'or compressed sparse matrix.')
-    parser.add_argument(
-        'samples', help='Comma-delimited file with VCF sample '
-                        'IDs and corresponding disease status (0 or 1)')
-    parser.add_argument('gene_list',
-                        help='Single-column list of genes to test.')
-    parser.add_argument('-t', '--threads', type=int, default=1,
-                        help='Number of threads to run Weka on.')
-    parser.add_argument('-r', '--seed', type=int, default=111,
-                        help='Random seed for generating KFold samples.')
-    parser.add_argument('-k', '--kfolds', type=int, default=10,
-                        help='Number of folds for cross-validation.')
+    parser = argparse.ArgumentParser(description='Main script for pyEA-ML pipeline.')
+    parser.add_argument('run_folder', type=Path, help='Directory where experiment is being run.')
+    parser.add_argument('data', type=Path, help='VCF file annotated by ANNOVAR and EA, or compressed sparse matrix.')
+    parser.add_argument('samples', type=Path,
+                        help='Comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
+    parser.add_argument('gene_list', type=Path, help='Single-column list of genes to test.')
+    parser.add_argument('-t', '--threads', type=int, default=1, help='Number of threads to run Weka on.')
+    parser.add_argument('-r', '--seed', type=int, default=111, help='Random seed for generating KFold samples.')
+    parser.add_argument('-k', '--kfolds', type=int, default=10, help='Number of folds for cross-validation.')
 
     args = parser.parse_args()
-    return (args.run_folder, args.data, args.samples, args.gene_list,
-            args.threads, args.seed, args.kfolds)
+    return args.run_folder, args.data, args.samples, args.gene_list, args.threads, args.seed, args.kfolds
 
 
 def main():
@@ -245,8 +223,7 @@ def main():
     exp_dir, data, sample_f, gene_list, threads, seed, kfolds = argparser()
 
     # either load existing design matrix or compute new one from VCF
-    pipeline = Pipeline(exp_dir, data, sample_f, gene_list,
-                        threads=threads, seed=seed, kfolds=kfolds)
+    pipeline = Pipeline(exp_dir, data, sample_f, gene_list, threads=threads, seed=seed, kfolds=kfolds)
     if not data.endswith('.npz'):
         pipeline.process_vcf()
     print('Feature matrix loaded.')
@@ -264,4 +241,4 @@ if __name__ == '__main__':
     main()
     end = time.time()
     elapsed = str(datetime.timedelta(seconds=end - start))
-    print('Time elapsed: {}'.format(elapsed))
+    print(f'Time elapsed: {elapsed}')
