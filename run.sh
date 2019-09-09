@@ -7,12 +7,12 @@
 repSource=$(readlink -f `dirname ${BASH_SOURCE[0]}`)
 # check for conda
 if ! which conda > /dev/null; then
-    echo -e "Conda not found! Install? (y/n) \c"
+    echo -e "Conda not found! Add to Path? (y/n) \c"
     read REPLY
     if [[ "$REPLY" = "y" ]]; then
         echo 'export PATH=/lab/cedar/shared/anaconda3/bin:$PATH' >> $HOME/.bashrc
     else
-        echo "Conda is required for proper virtual environment setup."
+        echo "Conda is required for proper virtual environment setup. Please install Conda on your system."
         exit 1
     fi
 fi
@@ -26,9 +26,12 @@ if [[ ${ENVS} = *${ENV_NAME}* ]]; then
    source activate ${ENV_NAME}
 else
     # make virtual environment
-    conda env create -f ${repSource}/environment.yml
+    conda create -n ${ENV_NAME} -c bioconda python=3.7.2 java-jdk=8.0.92
     source activate ${ENV_NAME}
+    export JAVA_HOME=${CONDA_PREFIX}/jre
+    conda env update -f ${repSource}/environment.yml
 fi
+
 export JAVA_HOME=${CONDA_PREFIX}/jre
 export PATH=${JAVA_HOME}/bin:$PATH
 

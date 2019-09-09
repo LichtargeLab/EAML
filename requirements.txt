@@ -2,7 +2,6 @@ javabridge==1.0.18
 numpy==1.16.2
 pandas==0.24.1
 pysam==0.15.2
-python-dotenv==0.10.1
 python-weka-wrapper3==0.1.7
 scikit-learn==0.20.3
 scipy==1.2.1
