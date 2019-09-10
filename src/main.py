@@ -44,8 +44,7 @@ class Pipeline(object):
             hyperparameters.
         kfolds (int): Number of folds for cross-validation.
     """
-    def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111,
-                 kfolds=10):
+    def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
         self.threads = threads
         self.expdir = expdir
         self.data = data
@@ -67,7 +66,7 @@ class Pipeline(object):
         self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
 
         # initialize feature matrix
-        if self.data.endswith('.npz'):
+        if self.data.suffix == '.npz':
             arr = utils.load_matrix(self.data)
         else:
             arr = np.ones((len(self.samples), len(self._ft_labels)))
@@ -75,8 +74,8 @@ class Pipeline(object):
         self.result_df = None
 
         # load classifier information
-        pipe_path = os.path.dirname(sys.argv[0])
-        self.clf_info = pd.read_csv(pipe_path + '/../classifiers.csv',
+        pipe_path = Path(sys.argv[0]).parent
+        self.clf_info = pd.read_csv(pipe_path.parent / 'classifiers.csv',
                                     converters={'options': lambda x: x[1:-1].split(',')})
         # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
         if self.kfolds == len(self.samples):
@@ -224,7 +223,7 @@ def main():
 
     # either load existing design matrix or compute new one from VCF
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list, threads=threads, seed=seed, kfolds=kfolds)
-    if not data.endswith('.npz'):
+    if not data.suffix == '.npz':
         pipeline.process_vcf()
     print('Feature matrix loaded.')
 
