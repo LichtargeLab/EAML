@@ -7,6 +7,7 @@ Created on 2019-04-17
 import signal
 import sys
 from collections import defaultdict
+from pathlib import Path
 from multiprocessing import Pool
 
 import numpy as np
@@ -15,6 +16,7 @@ import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
 from weka.core.converters import Loader
 from weka.core.classes import Random
+from design_matrix import DesignMatrix
 
 
 # noinspection PyGlobalUndefined
@@ -127,6 +129,17 @@ def _append_results(worker_file, gene, gene_results):
 
 
 def split_matrix(expdir, design_matrix, test_genes, hyps=None, seed=111, n_splits=10):
+    """
+    Splits whole-genome design matrix into separate train/test files for each gene and fold.
+
+    Args:
+        expdir (Path): Path to the experiment directory.
+        design_matrix (DesignMatrix): Container for design matrix.
+        test_genes (list): Genes being tested.
+        hyps (list/tuple): The EA/zygosity "hypotheses" to use as feature cutoffs.
+        seed (int): Random seed for KFold sampling.
+        n_splits (int): Number of folds for cross-validation.
+    """
     arff_dir = expdir / 'arffs'
     arff_dir.mkdir(exist_ok=True)
     # generate KFold groups for samples
@@ -155,7 +168,7 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, hyps=None, 
         test_genes (list): The list of genes being tested.
         n_workers (int): Number of workers to generate in multiprocessing Pool.
         clf_info (DataFrame): Info about classifiers and their parameters.
-        hyps (list): EA/variant hypotheses being used as features.
+        hyps (list/tuple): EA/variant hypotheses being used as features.
         seed (int): Random seed for generating KFold samples.
         n_splits (int): Number of folds for cross-validation.
     """

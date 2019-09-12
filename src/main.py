@@ -31,7 +31,7 @@ class Pipeline(object):
     Attributes:
         threads (int): Number of cores to be used by Weka
         expdir (Path): filepath to experiment folder
-        data (str): filepath to VCF file
+        data (Path): filepath to VCF file
         seed (int): Random seed for KFold sampling
         hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs.
         tabix (str): filepath to index file for VCF
@@ -50,7 +50,7 @@ class Pipeline(object):
         self.data = data
         self.seed = seed
         self.kfolds = kfolds
-        self.hypotheses = ['D1', 'D30', 'D70', 'R1', 'R30', 'R70']
+        self.hypotheses = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
 
         # import tabix-indexed file if possible
         if os.path.exists(str(self.data) + '.tbi'):
@@ -85,6 +85,9 @@ class Pipeline(object):
         """
         Converts the test genes to actual feature labels based on test
         hypotheses.
+
+        Args:
+            hyps (list/tuple): EA "hypotheses" being tested.
 
         Returns:
             list: The list of feature labels.
@@ -197,6 +200,7 @@ class Pipeline(object):
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
     def cleanup(self):
+        """Deletes intermediate worker and ARFF files."""
         for i in range(self.threads):
             os.remove(self.expdir / f'worker-{i}.results.csv')
         shutil.rmtree(self.expdir / 'arffs/')
