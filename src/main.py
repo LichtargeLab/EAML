@@ -145,6 +145,7 @@ class Pipeline(object):
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
         vcf = VariantFile(self.data, index_filename=self.tabix)
+        vcf.subset_samples(self.samples)
         for contig in list(range(1, 23)) + ['X', 'Y']:
             try:
                 print('Processing chromosome {}...'.format(contig))
