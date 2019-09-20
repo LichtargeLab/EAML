@@ -2,8 +2,6 @@
 pyEA-ML
 ===============================
 
-* Free software: ISC license
-
 The Python version of the lab EA-ML pipeline.
 
 This pipeline uses a series of supervised learning algorithms to score a gene's contribution to disease risk based on
