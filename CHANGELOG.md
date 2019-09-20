@@ -18,7 +18,6 @@
   predictions
 - Reports if X/Y chromosomes are missing from VCF data
 - Weka code moved to separate wrapper module
-- 
 
 # 0.2.0 (2019-04-04)
 
