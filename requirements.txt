@@ -1,4 +1,5 @@
 javabridge==1.0.18
+matplotlib==3.1.1
 numpy==1.16.2
 pandas==0.24.1
 pysam==0.15.2

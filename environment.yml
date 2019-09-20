@@ -5,9 +5,9 @@ channels:
   - defaults
 dependencies:
   - bcftools=1.9
-  - bzip2=1.0.6
   - htslib=1.9
   - java-jdk=8.0.92
+  - matplotlib=3.1.1
   - numpy=1.16.2
   - pandas=0.24.1
   - pip=19.0.3
@@ -16,8 +16,9 @@ dependencies:
   - samtools=1.9
   - scikit-learn=0.20.3
   - scipy=1.2.1
+  - setuptools=41.0.1
   - pip:
     - javabridge==1.0.18
     - python-weka-wrapper3==0.1.7
-prefix: /Users/dillonshapiro/anaconda3/envs/pyEA-ML
+prefix: /Users/dillonshapiro/miniconda3/envs/pyEA-ML
 
