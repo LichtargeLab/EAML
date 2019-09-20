@@ -202,7 +202,7 @@ class Pipeline(object):
         shutil.rmtree(self.expdir / 'arffs/')
 
 
-def run(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
+def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
     start = time.time()
     # either load existing design matrix or compute new one from VCF
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list, threads=threads, seed=seed, kfolds=kfolds)
