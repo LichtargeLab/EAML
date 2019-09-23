@@ -203,6 +203,9 @@ class Pipeline(object):
 
 
 def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
+    # check for JAVA_HOME
+    assert os.environ['JAVA_HOME'] is not None
+
     start = time.time()
     # either load existing design matrix or compute new one from VCF
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list, threads=threads, seed=seed, kfolds=kfolds)
