@@ -43,6 +43,8 @@ def main(args=None, function=None):
     info = 'visualize results of EA-ML analysis'
     sub = subs.add_parser('visualize', help=info)
     sub.add_argument('--dpi', default=150, help='DPI for output figures')
+    sub.add_argument('-o', '--output', type=Path, help='location to output figures')
+    sub.add_argument('-p', '--prefix', default='maxMCC', help='prefix for outfit files')
 
     # Parse arguments
     namespace = parser.parse_args(args=args)
@@ -67,7 +69,9 @@ def _get_command(function, namespace):
         pass
     elif namespace.command == 'visualize':
         function = visualize
-        kwargs.update(dpi=namespace.dpi)
+        output = namespace.output
+        args.append(output) if output else args.append(namespace.experiment_dir)
+        kwargs.update(dpi=namespace.dpi, prefix=namespace.prefix)
 
     return function, args, kwargs
 

@@ -27,9 +27,9 @@ def mcc_scatter(results, dpi=150):
     ranks = [i + 1 for i in range(len(results))]
 
     fig = plt.figure(dpi=dpi)
-    fig.scatter(ranks, df.maxMCC)
-    fig.xlabel('Rank')
-    fig.ylabel('MCC')
+    plt.scatter(ranks, results.maxMCC, s=12, color='black')
+    plt.xlabel('Rank')
+    plt.ylabel('MCC')
     return fig
 
 
@@ -47,15 +47,15 @@ def mcc_hist(results, dpi=150):
     weights = np.zeros_like(results.maxMCC) + 1 / len(results)
 
     fig = plt.figure(dpi=dpi)
-    fig.hist(results.maxMCC, weights=weights)
-    fig.xlabel('MCC')
-    fig.ylabel('Frequency')
+    plt.hist(results.maxMCC, weights=weights, bins=20, color='black')
+    plt.xlabel('MCC')
+    plt.ylabel('Frequency')
     return fig
 
 
-def visualize(out_dir, dpi=150):
-    results = pd.read_csv(out_dir / 'maxMCC_summary.csv').sort_values('maxMCC', ascending=False)
+def visualize(exp_dir, out_dir, prefix='maxMCC', dpi=150):
+    results = pd.read_csv(exp_dir / 'maxMCC_summary.csv').sort_values('maxMCC', ascending=False)
     scatter = mcc_scatter(results, dpi=dpi)
-    scatter.savefig(out_dir / 'maxMCC-scatter.png')
+    scatter.savefig(out_dir / f'{prefix}-scatter.png')
     hist = mcc_hist(results, dpi=dpi)
-    hist.savefig(out_dir / 'maxMCC-hist.png')
+    hist.savefig(out_dir / f'{prefix}-hist.png')
