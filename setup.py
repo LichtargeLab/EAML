@@ -9,8 +9,8 @@ import setuptools
 
 from ea_ml import __project__, __version__, CLI, DESCRIPTION
 
-if os.path.exists('README.rst'):
-    README = open('README.rst').read()
+if os.path.exists('README.md'):
+    README = open('README.md').read()
 else:
     README = ""
 CHANGES = open('CHANGELOG.md').read()
