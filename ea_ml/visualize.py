@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import pandas as pd
-sns.set()
+sns.set(context='talk', style='ticks')
 
 
 def mcc_scatter(results, dpi=150):
@@ -31,6 +31,7 @@ def mcc_scatter(results, dpi=150):
     plt.xlabel('Rank')
     plt.ylabel('MCC')
     plt.tight_layout()
+    sns.despine()
     return fig
 
 
@@ -52,6 +53,7 @@ def mcc_hist(results, dpi=150):
     plt.xlabel('MCC')
     plt.ylabel('Frequency')
     plt.tight_layout()
+    sns.despine()
     return fig
 
 
