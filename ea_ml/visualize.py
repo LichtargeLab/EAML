@@ -30,6 +30,7 @@ def mcc_scatter(results, dpi=150):
     plt.scatter(ranks, results.maxMCC, s=12, color='black')
     plt.xlabel('Rank')
     plt.ylabel('MCC')
+    plt.tight_layout()
     return fig
 
 
@@ -50,6 +51,7 @@ def mcc_hist(results, dpi=150):
     plt.hist(results.maxMCC, weights=weights, bins=20, color='black')
     plt.xlabel('MCC')
     plt.ylabel('Frequency')
+    plt.tight_layout()
     return fig
 
 
