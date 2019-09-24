@@ -16,7 +16,8 @@ import weka.core.jvm as jvm
 from weka.classifiers import Classifier, Evaluation
 from weka.core.converters import Loader
 from weka.core.classes import Random
-from design_matrix import DesignMatrix
+
+from .design_matrix import DesignMatrix
 
 
 # noinspection PyGlobalUndefined

@@ -35,6 +35,7 @@ if [[ ${ENVS} != *${ENV_NAME}* ]]; then
     source activate ${ENV_NAME}
     export JAVA_HOME=${CONDA_PREFIX}/jre
     conda env update -f ${repSource}/environment.yml
+    pip install -e ${repSource}
 else
     echo "pyEA-ML environment already installed."
 fi

@@ -7,13 +7,13 @@ Created on 9/20/19
 import os
 import setuptools
 
-from .ea_ml import __project__, __version__, CLI, DESCRIPTION
+from ea_ml import __project__, __version__, CLI, DESCRIPTION
 
 if os.path.exists('README.rst'):
     README = open('README.rst').read()
 else:
     README = ""
-CHANGES = open('CHANGES.md').read()
+CHANGES = open('CHANGELOG.md').read()
 
 setuptools.setup(
     name=__project__,

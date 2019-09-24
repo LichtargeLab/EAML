@@ -7,6 +7,7 @@ Created on 2019-01-28
 @author: dillonshapiro
 """
 import re
+
 from scipy.sparse import load_npz
 
 
