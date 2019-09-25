@@ -65,7 +65,6 @@ Optional arguments:
 | -t, --threads  | \<int\>   | experiment directory                              |
 | -s, --seed     | \<int\>   | VCF or .npz matrix                                |
 | -k, --kfolds   | \<int\>   | two-column CSV with sample IDs and disease status |
-| -h, --help     | NA        | single-column list of genes                       |
 
 *Note: To specify leave-one-out validation, set the number of folds equal to the
 number of samples in the dataset.*
