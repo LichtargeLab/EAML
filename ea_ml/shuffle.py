@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-Created on 2019-04-22
+Created on 9/26/19
 
 @author: dillonshapiro
 
-Wrapper script that runs a label shuffling experiment to assign significance
+Functions that run a label shuffling experiment to assign significance
 z-score/p-value to top predictions from EA-ML analysis.
 """
-import pandas as pd
-import numpy as np
 import os
 import shutil
-from sys import argv
-import subprocess
-import argparse
-from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from scipy import stats
+
+from .pipeline import run_ea_ml
 
 
 def shuffle_labels(df_path, run_dir):
@@ -42,12 +41,10 @@ def merge_runs(exp_dir, n_runs=100):
 
     Args:
         exp_dir (str): Path to the main experiment folder.
-        n_runs (int): Number of shufflings to incorporate into the random
-            distributions.
+        n_runs (int): Number of shufflings to incorporate into the random distributions.
 
     Returns:
-        merged_df (pd.DataFrame): A DataFrame of the random MCC distribution
-            for each tested gene.
+        merged_df (pd.DataFrame): A DataFrame of the random MCC distribution for each tested gene.
     """
     merged_df = pd.read_csv(f'{exp_dir}/run1/maxMCC_summary.csv')
     merged_df.columns = ['gene', 'run1']
@@ -62,8 +59,8 @@ def merge_runs(exp_dir, n_runs=100):
 
 def _nonzero_shapiro(arr):
     """
-    Removes MCCs that equal 0, as these skew the distribution and they are
-    already removed from our whole-genome comparison
+    Removes MCCs that equal 0, as these skew the distribution and they are already removed from our
+    whole-genome comparison
     """
     filt_arr = np.array([x for x in arr if x != 0])
     return stats.shapiro(filt_arr)[1]
@@ -84,16 +81,14 @@ def compute_zscores(preds_path, shuffle_results):
     return rand_results
 
 
-def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
-         n_workers=4, n_runs=100):
+def run_shuffling(exp_dir, data, samples, gene_list, preds_path, threads=1, seed=111, kfolds=10, n_runs=100):
     for i in range(1, n_runs + 1):
         run_dir = f'{exp_dir}/run{i}'
         if not os.path.exists(run_dir):
             os.mkdir(run_dir)
-        new_labels = shuffle_labels(labels_path, run_dir)
+        new_labels = shuffle_labels(samples, run_dir)
         os.chdir(run_dir)
-        subprocess.call([f'{pipe_dir}/run.sh', '-e', run_dir, '-d', vcf_path,
-                         '-s', new_labels, '-g', gene_list, '-n', str(n_workers)])
+        run_ea_ml(exp_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds)
 
     shuffle_results = merge_runs(exp_dir, n_runs)
     shuffle_results.to_csv(f'{exp_dir}/random_distributions.csv')
@@ -102,37 +97,3 @@ def main(exp_dir, labels_path, pipe_dir, vcf_path, gene_list, preds_path,
     os.mkdir('random_exp')
     for i in range(1, n_runs + 1):
         shutil.move(f'{exp_dir}/run{i}', f'{exp_dir}/random_exp')
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Wrapper script that runs a label shuffling experiment to '
-                    'assign signficance z-score/p-value to top predictions '
-                    'from EA-ML analysis.'
-    )
-    parser.add_argument('exp_dir', type=Path,
-                        help='Path to the overarching experiment directory')
-    parser.add_argument('labels_path', type=Path,
-                        help='Path to samples list containing original '
-                             'corresponding labels')
-    parser.add_argument('data', type=Path, help='Path to VCF file')
-    parser.add_argument('gene_list', type=Path,
-                        help='Path to single-column list of test genes')
-    parser.add_argument('predictions', type=Path,
-                        help='Path to real experiment results')
-    parser.add_argument('--n_jobs', '-n', type=int, default=4,
-                        help='Number of worker processes to use for Weka')
-    parser.add_argument('--n_runs', '-r', type=int, default=100,
-                        help='Number of shuffling runs to include in '
-                             'distribution')
-    args = parser.parse_args()
-
-    pipe_dir = Path(argv[0]).parent.parent.expanduser().resolve()
-    exp_dir = args.exp_dir.expanduser().resolve()
-    labels_path = args.labels_path.expanduser().resolve()
-    vcf = args.data.expanduser().resolve()
-    gene_list = args.gene_list.expanduser().resolve()
-    predictions = args.predictions.expanduser().resolve()
-
-    main(exp_dir, labels_path, pipe_dir, vcf, gene_list, predictions,
-         n_workers=args.n_jobs, n_runs=args.n_runs)
