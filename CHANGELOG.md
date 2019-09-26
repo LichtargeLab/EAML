@@ -1,3 +1,10 @@
+# 0.6.0 (2019-09-26)
+
+- Converted pipeline to pip-installable Python package
+- Moved all argument parsing to CLI module under `run`, `visualize`, and `shuffle` commands
+- Expanded package to allow for summary visualization and label-shuffling experiment through CLI
+- Added conda environment installation script
+
 # 0.5.0 (2019-09-13)
 
 - Added subsetting of samples through pysam before VCF parsing
