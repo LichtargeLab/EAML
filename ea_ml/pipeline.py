@@ -14,12 +14,13 @@ import shutil
 import time
 from collections import OrderedDict
 from pathlib import Path
+from itertools import product
 
 import numpy as np
 import pandas as pd
 from pysam import VariantFile
 
-from . import utils
+from .utils import fetch_variants, load_matrix, convert_zygo
 from .design_matrix import DesignMatrix
 from .weka_wrapper import run_weka
 
@@ -31,7 +32,8 @@ class Pipeline(object):
         expdir (Path): filepath to experiment folder
         data (Path): filepath to VCF file
         seed (int): Random seed for KFold sampling
-        hypotheses (list): The EA/zygosity hypotheses to use as feature cutoffs
+        feature_names (tuple): The EA/zygosity feature labels for each gene
+        ft_cutoffs (list): The EA/zygosity cutoffs for each feature
         tabix (str): filepath to index file for VCF
         targets (np.ndarray): Array of target labels for training/prediction
         samples (list): List of samples to test
@@ -48,7 +50,8 @@ class Pipeline(object):
         self.data = data
         self.seed = seed
         self.kfolds = kfolds
-        self.hypotheses = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
+        self.feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
+        self.ft_cutoffs = list(product((1, 2), (1, 30, 70)))
 
         # import tabix-indexed file if possible
         if os.path.exists(str(self.data) + '.tbi'):
@@ -61,14 +64,15 @@ class Pipeline(object):
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
         self.test_genes = sorted(list(pd.read_csv(gene_list, header=None, squeeze=True)))
-        self._ft_labels = self._convert_genes_to_hyp(self.hypotheses)
+        self._gene_features = [f'{gene}_{feature}' for gene in self.test_genes for feature in self.feature_names]
 
-        # initialize feature matrix
+        # initialize design matrix
         if self.data.suffix == '.npz':
-            arr = utils.load_matrix(self.data)
+            arr = load_matrix(self.data)
         else:
-            arr = np.ones((len(self.samples), len(self._ft_labels)))
-        self.matrix = DesignMatrix(arr, self.targets, self._ft_labels, self.samples)
+            arr = np.ones((len(self.samples), len(self._gene_features)))
+        self.matrix = DesignMatrix(arr, self.targets, self._gene_features, self.samples,
+                                   feature_names=self.feature_names)
         self.result_df = None
 
         # load classifier information
@@ -77,65 +81,32 @@ class Pipeline(object):
         if self.kfolds == len(self.samples):
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
-    def _convert_genes_to_hyp(self, hyps):
-        """
-        Converts the test genes to actual feature labels based on test hypotheses.
-
-        Args:
-            hyps (list/tuple): EA "hypotheses" being tested
-
-        Returns:
-            list: The list of feature labels
-        """
-        ft_labels = []
-        for gene in self.test_genes:
-            for hyp in hyps:
-                ft_labels.append(f'{gene}_{hyp}')
-        return ft_labels
-
     def process_contig(self, vcf, contig=None):
         """
-        Reads and updates features in DesignMatrix based on a single contig.
+        Reads and updates gene features in DesignMatrix based on a single contig.
 
         Args:
             vcf (VariantFile): A VariantFile object
             contig (str): A specific contig/chromosome to fetch from the VCF. If None, will iterate through the entire
                 VCF file
         """
-        for rec in vcf.fetch(contig=contig):
-            gene = rec.info['gene']
-            score = utils.refactor_EA(rec.info['EA'])
-            if not any(score):
+        for gene, ea, sample_info in fetch_variants(vcf, contig=contig):
+            if gene not in self.test_genes or np.isnan(ea).all():
                 continue
-            # check for overlapping gene annotations
-            if isinstance(gene, tuple):
-                if len(gene) == len(score):
-                    g_ea_zip = list(zip(gene, score))
-                elif len(score) == 1:
-                    g_ea_zip = list(zip(gene, score * len(gene)))
-                else:
-                    raise ValueError("Length of EA tuple doesn't match expected sizes.")
-                g_ea_match = [(g, ea) for g, ea in g_ea_zip if g in self.test_genes]
-                if not g_ea_match:
-                    continue
-            else:
-                if gene not in self.test_genes:
-                    continue
-                g_ea_match = list(zip([gene] * len(score), score))
             # check genotypes and update matrix
-            for sample in self.samples:
-                try:
-                    gt = rec.samples[sample]['GT']
-                except (IndexError, KeyError):
-                    raise KeyError("Sample ID {} doesn't exists in VCF.".format(sample))
-                zygo = utils.convert_zygo(gt)
-                if zygo == 0:
-                    continue
-                for g, ea in g_ea_match:
-                    if ea is not None:
-                        for hyp in self.hypotheses:
-                            if utils.check_hyp(zygo, ea, hyp):
-                                self.matrix.update(utils.neg_pEA(ea, zygo), '_'.join([g, hyp]), sample)
+            gts = np.array([convert_zygo(sample_info[sample]['GT']) for sample in self.samples])
+            # duplicate EA scores to do numpy operations across all samples
+            ea_arr = np.repeat(ea[np.newaxis, :], len(gts), axis=0).T
+            feature_arrs = []
+            for cutoff in self.ft_cutoffs:
+                mask = (ea_arr >= cutoff[1]) & (gts >= cutoff[0])  # EA and zygosity mask for each feature
+                prod_arr = np.nanprod((1 - (ea_arr * mask) / 100)**gts, axis=0)  # pEA calculation
+                feature_arrs.append(prod_arr)
+            feature_arrs = np.vstack(feature_arrs).T
+            g_idx = self.test_genes.index(gene)
+            if g_idx != 0:
+                g_idx *= 6
+            self.matrix.update(feature_arrs, gene)
 
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
@@ -154,8 +125,8 @@ class Pipeline(object):
 
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
-        run_weka(self.expdir, self.matrix, self.test_genes, self.threads, self.clf_info, hyps=self.hypotheses,
-                 seed=self.seed, n_splits=self.kfolds)
+        run_weka(self.expdir, self.matrix, self.test_genes, self.threads, self.clf_info, seed=self.seed,
+                 n_splits=self.kfolds)
 
     def summarize_experiment(self):
         """Combines results from Weka experiment files"""
@@ -211,7 +182,7 @@ def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10
     pipeline = Pipeline(exp_dir, data, sample_f, gene_list, threads=threads, seed=seed, kfolds=kfolds)
     if not data.suffix == '.npz':
         pipeline.process_vcf()
-    print('Feature matrix loaded.')
+    print('Design matrix loaded.')
 
     print('Running experiment...')
     pipeline.run_weka_exp()

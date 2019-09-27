@@ -21,7 +21,7 @@ from .design_matrix import DesignMatrix
 
 
 # noinspection PyGlobalUndefined
-def _init_worker(expdir, clf_info, n_splits, hyps, seed=111):
+def _init_worker(expdir, clf_info, n_splits, seed=111):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
@@ -30,7 +30,6 @@ def _init_worker(expdir, clf_info, n_splits, hyps, seed=111):
         expdir (Path): Path to experiment directory.
         clf_info (DataFrame): DataFrame of Weka classifiers, their Weka object names, and hyperparameters.
         n_splits (int): Number of splits used for cross-validation.
-        hyps (list): The hypotheses for fetching features.
         seed (int): The random seed used for sampling.
     """
     global exp_dir
@@ -39,8 +38,6 @@ def _init_worker(expdir, clf_info, n_splits, hyps, seed=111):
     clf_calls = clf_info
     global n_folds
     n_folds = n_splits
-    global hypotheses
-    hypotheses = hyps
     global rseed
     rseed = seed
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -129,7 +126,7 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def split_matrix(expdir, design_matrix, test_genes, hyps=None, seed=111, n_splits=10):
+def split_matrix(expdir, design_matrix, test_genes, seed=111, n_splits=10):
     """
     Splits whole-genome design matrix into separate train/test files for each gene and fold.
 
@@ -137,7 +134,6 @@ def split_matrix(expdir, design_matrix, test_genes, hyps=None, seed=111, n_split
         expdir (Path): Path to the experiment directory.
         design_matrix (DesignMatrix): Container for design matrix.
         test_genes (list): Genes being tested.
-        hyps (list/tuple): The EA/zygosity "hypotheses" to use as feature cutoffs.
         seed (int): Random seed for KFold sampling.
         n_splits (int): Number of folds for cross-validation.
     """
@@ -146,22 +142,20 @@ def split_matrix(expdir, design_matrix, test_genes, hyps=None, seed=111, n_split
     # generate KFold groups for samples
     if n_splits == len(design_matrix):
         for gene in test_genes:
-            design_matrix.write_arff(arff_dir / f'{gene}.arff', gene=gene, hyps=hyps)
+            design_matrix.write_arff(arff_dir / f'{gene}.arff', gene=gene)
     else:
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
         splits = list(kf.split(design_matrix.X, design_matrix.y))
         for gene in test_genes:
             for i, (train, test) in enumerate(splits):
-                design_matrix.write_arff(arff_dir / f'{gene}_{i}-train.arff', gene=gene, row_idxs=train, hyps=hyps)
-                design_matrix.write_arff(arff_dir / f'{gene}_{i}-test.arff', gene=gene, row_idxs=test, hyps=hyps)
+                design_matrix.write_arff(arff_dir / f'{gene}_{i}-train.arff', gene=gene, row_idxs=train)
+                design_matrix.write_arff(arff_dir / f'{gene}_{i}-test.arff', gene=gene, row_idxs=test)
 
 
-def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, hyps=None, seed=111, n_splits=10):
+def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n_splits=10):
     """
-    The overall Weka experiment. The steps include loading the K .arff files
-    for each gene, building a new classifier based on the training set, then
-    evaluating the model on the test set and outputting the MCC to a
-    dictionary.
+    The overall Weka experiment. The steps include loading the K .arff files for each gene, building a new classifier
+    based on the training set, then evaluating the model on the test set and outputting the MCC to a dictionary.
 
     Args:
         expdir (Path): Path to experiment directory.
@@ -169,7 +163,6 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, hyps=None, 
         test_genes (list): The list of genes being tested.
         n_workers (int): Number of workers to generate in multiprocessing Pool.
         clf_info (DataFrame): Info about classifiers and their parameters.
-        hyps (list/tuple): EA/variant hypotheses being used as features.
         seed (int): Random seed for generating KFold samples.
         n_splits (int): Number of folds for cross-validation.
     """
@@ -177,11 +170,10 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, hyps=None, 
     # split genes into chunks by number of workers
     gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
     # write intermediate train/test arff files for each CV fold and/or gene
-    split_matrix(expdir, design_matrix, test_genes, hyps=hyps, seed=seed, n_splits=n_splits)
+    split_matrix(expdir, design_matrix, test_genes, seed=seed, n_splits=n_splits)
     # these are set as globals in the worker initializer
-    global_args = [expdir, clf_info, n_splits, hyps]
-    pool = Pool(n_workers, initializer=_init_worker, initargs=global_args,
-                maxtasksperchild=1)
+    global_args = [expdir, clf_info, n_splits]
+    pool = Pool(n_workers, initializer=_init_worker, initargs=global_args, maxtasksperchild=1)
     try:
         if n_splits == len(design_matrix):
             pool.map(_loo_worker, gene_splits)

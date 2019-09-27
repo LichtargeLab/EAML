@@ -1,3 +1,9 @@
+# 0.6.1 (2019-09-26)
+
+- Partially vectorized pEA calculations on each variant
+- All EA/zygosity filtering now performed by numpy masks
+- Renamed 'hypotheses' to 'features' to avoid naming confusion
+
 # 0.6.0 (2019-09-26)
 
 - Converted pipeline to pip-installable Python package
@@ -17,7 +23,7 @@
 
 - Added intermediate worker files to track Weka results
 - Switched to argument parsing through argparse instead of loading from python-dotenv
-- multiprocessing Pool uses global variables for common arguments
+- `multiprocessing Pool` uses global variables for common arguments
 
 # 0.3.0 (2019-05-21)
 

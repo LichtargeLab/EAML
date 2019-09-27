@@ -15,50 +15,55 @@ from scipy.sparse import save_npz, csr_matrix
 
 class DesignMatrix(object):
     """
-    A container for holding information about a feature matrix.
+    A container for holding information about a design matrix.
 
     Args:
         X (ndarray): The 2D data matrix
         y (ndarray): 1D array of disease status labels corresponding to each sample
-        feature_labels (list): The names for each column in X
+        gene_features (list): The names for each column in X
         id_labels (Series): The list of names for each sample
+        feature_names (tuple/list): The EA/zygosity feature labels for each gene
 
     Attributes:
         X (ndarray)
         y (ndarray)
     """
-    def __init__(self, X, y, feature_labels, id_labels):
-        self.feature_labels = feature_labels
+    def __init__(self, X, y, gene_features, id_labels, feature_names=None):
+        self.gene_features = gene_features
+        self.feature_names = feature_names
         self.id_labels = id_labels
         self.X = X
         self.y = y
-        self._ft_map = OrderedDict((feature, i) for i, feature in enumerate(feature_labels))
+        self._ft_map = OrderedDict((feature, i) for i, feature in enumerate(self.gene_features))
         self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
 
     def __len__(self):
         return self.X.shape[0]
 
-    def update(self, val, ft_label, sample):
+    def update(self, val_arr, gene):
         """
-        Updates a specific cell in the X matrix.
+        Updates a specific gene in the X matrix.
 
         Args:
-            val (float): value to modify feature by
-            ft_label (str): The label of the feature column (i.e. gene name)
-            sample (str): The specific sample ID corresponding to a example row
+            val_arr (ndarray): Array of pEA calculations
+            gene (str): The gene of interest to modify feature_names of
         """
-        ft_idx = self._ft_map[ft_label]
-        id_idx = self._id_map[sample]
-        self.X[id_idx, ft_idx] *= val
+        if self.feature_names:
+            col_names = ['_'.join([gene, ft_name]) for ft_name in self.feature_names]
+            col_idxs = [self._ft_map[ft] for ft in col_names]
+            self.X[:, col_idxs] *= val_arr
+        else:
+            col_idx = self._ft_map[gene]
+            self.X[:, col_idx] *= val_arr
 
-    def get_gene(self, gene, hyps=None):
-        if hyps:
-            col_names = ['_'.join([gene, hyp]) for hyp in hyps]
+    def get_gene(self, gene):
+        if self.feature_names:
+            col_names = ['_'.join([gene, ft_name]) for ft_name in self.feature_names]
             col_idxs = [self._ft_map[ft] for ft in col_names]
             return DesignMatrix(
                 self.X[:, col_idxs],
                 self.y,
-                [self.feature_labels[idx] for idx in col_idxs],
+                [self.gene_features[idx] for idx in col_idxs],
                 self.id_labels
             )
         else:
@@ -66,7 +71,7 @@ class DesignMatrix(object):
             return DesignMatrix(
                 self.X[:, col_idx],
                 self.y,
-                self.feature_labels[col_idx],
+                self.gene_features[col_idx],
                 self.id_labels
             )
 
@@ -75,20 +80,19 @@ class DesignMatrix(object):
         Writes X matrix out as compressed sparse matrix in .npz format.
 
         Args:
-            f_out (Path): Filepath to save compressed matrix to.
+            f_out (Path): Filepath to save compressed matrix to
         """
         sp_matrix = csr_matrix(self.X)
         save_npz(f_out, sp_matrix)
 
-    def write_arff(self, f_out, gene=None, row_idxs=None, hyps=None):
+    def write_arff(self, f_out, gene=None, row_idxs=None):
         """
             Outputs an .arff file corresponding to the DesignMatrix object.
 
             Args:
                 f_out (Path): The filepath for the output
-                gene (str, optional): Gene to subset from matrix.
-                row_idxs (ndarray, optional): Specifies specific samples to write to output.
-                hyps (list): EA/variant hypotheses being used as features.
+                gene (str, optional): Gene to subset from matrix
+                row_idxs (ndarray, optional): Specifies specific samples to write to output
             """
         def _write_rows(examples):
             for example, label in examples:
@@ -97,13 +101,13 @@ class DesignMatrix(object):
                 f.write(','.join(example) + '\n')
 
         if gene:
-            matrix = self.get_gene(gene=gene, hyps=hyps)
+            matrix = self.get_gene(gene=gene)
         else:
             matrix = self
         with open(f_out, 'w') as f:
             relation = f_out.stem
             f.write(f'@relation {relation}\n')
-            for ft in matrix.feature_labels:
+            for ft in matrix.gene_features:
                 f.write(f'@attribute {ft} REAL\n')
             f.write('@attribute class {0,1}\n')
             f.write('@data\n')
