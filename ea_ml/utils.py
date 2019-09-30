@@ -48,12 +48,12 @@ def convert_zygo(genotype):
     Returns:
         int: The zygosity of the variant (0/1/2)
     """
-    if genotype == (0, 0):
-        zygo = 0
+    if genotype in [(1, 0), (0, 1), ('.', 1), (1, '.')]:
+        zygo = 1
     elif genotype == (1, 1):
         zygo = 2
     else:
-        zygo = 1
+        zygo = 0
     return zygo
 
 
