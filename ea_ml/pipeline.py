@@ -96,16 +96,13 @@ class Pipeline(object):
             # check genotypes and update matrix
             gts = np.array([convert_zygo(sample_info[sample]['GT']) for sample in self.samples])
             # duplicate EA scores to do numpy operations across all samples
-            ea_arr = np.repeat(ea[np.newaxis, :], len(gts), axis=0).T
+            ea_arr = np.repeat(ea[:, np.newaxis], len(gts), axis=1)
             feature_arrs = []
             for cutoff in self.ft_cutoffs:
                 mask = (ea_arr >= cutoff[1]) & (gts >= cutoff[0])  # EA and zygosity mask for each feature
                 prod_arr = np.nanprod((1 - (ea_arr * mask) / 100)**gts, axis=0)  # pEA calculation
                 feature_arrs.append(prod_arr)
             feature_arrs = np.vstack(feature_arrs).T
-            g_idx = self.test_genes.index(gene)
-            if g_idx != 0:
-                g_idx *= 6
             self.matrix.update(feature_arrs, gene)
 
     def process_vcf(self):
