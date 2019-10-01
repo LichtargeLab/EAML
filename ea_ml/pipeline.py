@@ -76,7 +76,8 @@ class Pipeline(object):
         self.result_df = None
 
         # load classifier information
-        self.clf_info = pd.read_csv('classifiers.csv', converters={'options': lambda x: x[1:-1].split(',')})
+        self.clf_info = pd.read_csv(Path(__file__).parent / 'classifiers.csv',
+                                    converters={'options': lambda x: x[1:-1].split(',')})
         # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
         if self.kfolds == len(self.samples):
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']

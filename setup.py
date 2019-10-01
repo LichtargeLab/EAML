@@ -24,5 +24,6 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points={'console_scripts': [f'{CLI} = ea_ml.cli:main']},
     long_description=f'{README}\n{CHANGES}',
-    install_requires=open('requirements.txt').readlines()
+    install_requires=open('requirements.txt').readlines(),
+    include_package_data=True
 )
