@@ -49,7 +49,7 @@ EA-ML can then be run by calling `ea-ml` and one of its commands:
 
 ### Main Pipeline
 
-Required arguments:
+Required arguments (note: don't include the argument name in the command line):
 
 | argument       | type          | description                                       |
 |----------------|---------------|---------------------------------------------------|
