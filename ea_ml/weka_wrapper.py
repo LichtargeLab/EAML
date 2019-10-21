@@ -172,13 +172,13 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n
     try:
         if n_splits == len(design_matrix):
             _split_matrix(expdir, design_matrix, test_genes)
-            pool.map(_weka_worker, gene_splits)
+            pool.map(_loo_worker, gene_splits)
         else:
             matrix_splits = []
             for split in gene_splits:
                 matrix_splits.append(design_matrix.get_genes(list(split)))
             kfolds = enumerate(list(zip(gene_splits, matrix_splits)))
-            pool.map(_loo_worker, kfolds)
+            pool.map(_weka_worker, kfolds)
         pool.close()
         pool.join()
     except KeyboardInterrupt:
