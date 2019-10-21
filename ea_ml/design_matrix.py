@@ -6,7 +6,7 @@ Created on 2019-01-28
 
 @author: dillonshapiro
 
-These are the commonly used data containers within the pipeline.
+This contains the data used within the pipeline.
 """
 from collections import OrderedDict
 
@@ -56,24 +56,18 @@ class DesignMatrix(object):
             col_idx = self._ft_map[gene]
             self.X[:, col_idx] *= val_arr
 
-    def get_gene(self, gene):
+    def get_genes(self, genes):
         if self.feature_names:
-            col_names = ['_'.join([gene, ft_name]) for ft_name in self.feature_names]
+            col_names = ['_'.join([gene, ft_name]) for gene in genes for ft_name in self.feature_names]
             col_idxs = [self._ft_map[ft] for ft in col_names]
-            return DesignMatrix(
-                self.X[:, col_idxs],
-                self.y,
-                [self.gene_features[idx] for idx in col_idxs],
-                self.id_labels
-            )
         else:
-            col_idx = self._ft_map[gene]
-            return DesignMatrix(
-                self.X[:, col_idx],
-                self.y,
-                self.gene_features[col_idx],
-                self.id_labels
-            )
+            col_idxs = [self._ft_map[gene] for gene in genes]
+        return DesignMatrix(
+            self.X[:, col_idxs],
+            self.y,
+            [self.gene_features[idx] for idx in col_idxs],
+            self.id_labels
+        )
 
     def write_matrix(self, f_out):
         """
@@ -101,7 +95,7 @@ class DesignMatrix(object):
                 f.write(','.join(example) + '\n')
 
         if gene:
-            matrix = self.get_gene(gene=gene)
+            matrix = self.get_genes([gene])
         else:
             matrix = self
         with open(f_out, 'w') as f:
