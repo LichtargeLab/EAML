@@ -66,7 +66,8 @@ class DesignMatrix(object):
             self.X[:, col_idxs],
             self.y,
             [self.gene_features[idx] for idx in col_idxs],
-            self.id_labels
+            self.id_labels,
+            self.feature_names
         )
 
     def write_matrix(self, f_out):
