@@ -1,3 +1,8 @@
+# 0.6.2 (2019-10-20)
+
+- moved writing of intermediate ARFF files to worker processes
+- intermediate ARFF files are now cleaned after fold is evaluated
+
 # 0.6.1 (2019-09-26)
 
 - Partially vectorized pEA calculations on each variant

@@ -165,10 +165,10 @@ class Pipeline(object):
         final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
 
     def cleanup(self):
-        """Deletes intermediate worker and ARFF files."""
+        """Deletes intermediate worker files and temp directory."""
         for i in range(self.threads):
             os.remove(self.expdir / f'worker-{i}.results.csv')
-        shutil.rmtree(self.expdir / 'arffs/')
+        shutil.rmtree(self.expdir / 'temp/')
 
 
 def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):

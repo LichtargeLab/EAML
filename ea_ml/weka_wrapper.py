@@ -21,16 +21,17 @@ from .design_matrix import DesignMatrix
 
 
 # noinspection PyGlobalUndefined
-def _init_worker(expdir, clf_info, n_splits, seed=111):
+def _init_worker(expdir, clf_info, n_splits, kf_splits, seed=111):
     """
     Initializes each worker process. This makes the design matrix data available
     as a shared global variable within the pool.
 
     Args:
-        expdir (Path): Path to experiment directory.
-        clf_info (DataFrame): DataFrame of Weka classifiers, their Weka object names, and hyperparameters.
-        n_splits (int): Number of splits used for cross-validation.
-        seed (int): The random seed used for sampling.
+        expdir (Path): Path to experiment directory
+        clf_info (DataFrame): DataFrame of Weka classifiers, their Weka object names, and hyperparameters
+        n_splits (int): Number of splits used for cross-validation
+        kf_splits (list): List of tuples containing train/test indices for each fold
+        seed (int): The random seed used for sampling
     """
     global exp_dir
     exp_dir = expdir
@@ -38,6 +39,8 @@ def _init_worker(expdir, clf_info, n_splits, seed=111):
     clf_calls = clf_info
     global n_folds
     n_folds = n_splits
+    global k_splits
+    k_splits = kf_splits
     global rseed
     rseed = seed
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -50,19 +53,23 @@ def _weka_worker(gene_split):
     Args:
         gene_split (ndarray): The split of genes to test through.
     """
-    wrk_idx, genes = gene_split
+    wrk_idx, (genes, design_matrix) = gene_split
     jvm.start(bundled=False)
     n_genes = len(genes)
     n_done = 0
     for gene in genes:
         result_d = defaultdict(list)
-        for i in range(n_folds):
+        for i, (train, test) in enumerate(k_splits):
+            # write intermediate train and test arffs
+            train_fn = exp_dir / 'temp' / f'{gene}_{i}-train.arff'
+            test_fn = exp_dir / 'temp' / f'{gene}_{i}-test.arff'
+            design_matrix.write_arff(train_fn, gene=gene, row_idxs=train)
+            design_matrix.write_arff(test_fn, gene=gene, row_idxs=test)
+
             # load train and test arffs
-            train = str(exp_dir / 'arffs' / f'{gene}_{i}-train.arff')
-            test = str(exp_dir / 'arffs' / f'{gene}_{i}-test.arff')
             loader = Loader(classname='weka.core.converters.ArffLoader')
-            train_arff = loader.load_file(train)
-            test_arff = loader.load_file(test)
+            train_arff = loader.load_file(str(train_fn))
+            test_arff = loader.load_file(str(test_fn))
             train_arff.class_is_last()
             test_arff.class_is_last()
 
@@ -77,6 +84,10 @@ def _weka_worker(gene_split):
                 if np.isnan(mcc):
                     mcc = 0
                 result_d[clf].append(mcc)
+
+            train_fn.unlink()
+            test_fn.unlink()
+
         _append_results(exp_dir / f'worker-{wrk_idx}.results.csv', gene, result_d)
         n_done += 1
         if n_done % 100 == 0:
@@ -126,30 +137,10 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def split_matrix(expdir, design_matrix, test_genes, seed=111, n_splits=10):
-    """
-    Splits whole-genome design matrix into separate train/test files for each gene and fold.
-
-    Args:
-        expdir (Path): Path to the experiment directory.
-        design_matrix (DesignMatrix): Container for design matrix.
-        test_genes (list): Genes being tested.
-        seed (int): Random seed for KFold sampling.
-        n_splits (int): Number of folds for cross-validation.
-    """
-    arff_dir = expdir / 'arffs'
-    arff_dir.mkdir(exist_ok=True)
+def _split_matrix(expdir, design_matrix, test_genes):
     # generate KFold groups for samples
-    if n_splits == len(design_matrix):
-        for gene in test_genes:
-            design_matrix.write_arff(arff_dir / f'{gene}.arff', gene=gene)
-    else:
-        kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-        splits = list(kf.split(design_matrix.X, design_matrix.y))
-        for gene in test_genes:
-            for i, (train, test) in enumerate(splits):
-                design_matrix.write_arff(arff_dir / f'{gene}_{i}-train.arff', gene=gene, row_idxs=train)
-                design_matrix.write_arff(arff_dir / f'{gene}_{i}-test.arff', gene=gene, row_idxs=test)
+    for gene in test_genes:
+        design_matrix.write_arff(expdir / 'temp' / f'{gene}.arff', gene=gene)
 
 
 def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n_splits=10):
@@ -166,19 +157,28 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n
         seed (int): Random seed for generating KFold samples.
         n_splits (int): Number of folds for cross-validation.
     """
+    (expdir / 'temp').mkdir(exist_ok=True)
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
-    gene_splits = enumerate(np.array_split(np.array(test_genes), n_workers))
-    # write intermediate train/test arff files for each CV fold and/or gene
-    split_matrix(expdir, design_matrix, test_genes, seed=seed, n_splits=n_splits)
+    gene_splits = np.array_split(np.array(test_genes), n_workers)
+    if n_splits != len(design_matrix):
+        kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+        kf_splits = list(kf.split(design_matrix.X, design_matrix.y))
+    else:
+        kf_splits = None
     # these are set as globals in the worker initializer
-    global_args = [expdir, clf_info, n_splits]
+    global_args = [expdir, clf_info, n_splits, kf_splits, seed]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args, maxtasksperchild=1)
     try:
         if n_splits == len(design_matrix):
-            pool.map(_loo_worker, gene_splits)
-        else:
+            _split_matrix(expdir, design_matrix, test_genes)
             pool.map(_weka_worker, gene_splits)
+        else:
+            matrix_splits = []
+            for split in gene_splits:
+                matrix_splits.append(design_matrix.get_genes(list(split)))
+            kfolds = enumerate(list(zip(gene_splits, matrix_splits)))
+            pool.map(_loo_worker, kfolds)
         pool.close()
         pool.join()
     except KeyboardInterrupt:
