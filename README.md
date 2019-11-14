@@ -66,8 +66,7 @@ Optional arguments:
 | -s, --seed     | \<int\>   | VCF or .npz matrix                                |
 | -k, --kfolds   | \<int\>   | two-column CSV with sample IDs and disease status |
 
-*Note: To specify leave-one-out validation, set the number of folds equal to the
-number of samples in the dataset.*
+*Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
 ## Input Requirements
 

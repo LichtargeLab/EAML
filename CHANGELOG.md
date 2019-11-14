@@ -1,7 +1,12 @@
+# 0.6.3 (2019-11-14)
+
+- Leave-One-Out is now specified by a `-1` argument to `--kfolds`
+- Code also mirrors how KFold worker arguments are generated
+
 # 0.6.2 (2019-10-20)
 
-- moved writing of intermediate ARFF files to worker processes
-- intermediate ARFF files are now cleaned after fold is evaluated
+- Moved writing of intermediate ARFF files to worker processes
+- Intermediate ARFF files are now cleaned after fold is evaluated
 
 # 0.6.1 (2019-09-26)
 
