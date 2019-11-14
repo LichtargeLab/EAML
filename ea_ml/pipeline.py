@@ -79,7 +79,7 @@ class Pipeline(object):
         self.clf_info = pd.read_csv(Path(__file__).parent / 'classifiers.csv',
                                     converters={'options': lambda x: x[1:-1].split(',')})
         # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
-        if self.kfolds == len(self.samples):
+        if self.kfolds == -1:
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
     def process_contig(self, vcf, contig=None):
@@ -131,7 +131,7 @@ class Pipeline(object):
         worker_files = self.expdir.glob('worker-*.results.csv')
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
-        if self.kfolds == len(self.samples):
+        if self.kfolds == -1:
             result_df.columns = ['gene', 'classifier', 'TP', 'TN', 'FP', 'FN', 'MCC']
         else:
             result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(self.kfolds)]
@@ -148,7 +148,7 @@ class Pipeline(object):
         for clf in self.clf_info['classifier']:
             clf_df = self.result_df.xs(clf, level='classifier')
             clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
-            if self.kfolds == len(self.samples):
+            if self.kfolds == -1:
                 # if LOO, only a single MCC is present per gene
                 clf_d[clf] = list(clf_df['MCC'])
             else:

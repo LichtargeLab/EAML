@@ -88,7 +88,7 @@ def _weka_worker(gene_split):
             train_fn.unlink()
             test_fn.unlink()
 
-        _append_results(exp_dir / f'worker-{wrk_idx}.results.csv', gene, result_d)
+        _append_results(exp_dir / 'temp' / f'worker-{wrk_idx}.results.csv', gene, result_d)
         n_done += 1
         if n_done % 100 == 0:
             print(f'Worker {wrk_idx}: {n_done} / {n_genes}')
@@ -97,21 +97,23 @@ def _weka_worker(gene_split):
 
 
 def _loo_worker(gene_split):
-    wrk_idx, genes = gene_split
+    wrk_idx, (genes, design_matrix) = gene_split
     jvm.start(bundled=False)
     n_genes = len(genes)
     n_done = 0
     for gene in genes:
         result_d = {}
+        gene_arff_fn = exp_dir / 'temp' / f'{gene}.arff'
+        design_matrix.write_arff(gene_arff_fn, gene=gene)
         loader = Loader(classname='weka.core.converters.ArffLoader')
-        arff = loader.load_file(f'arffs/{gene}.arff')
+        arff = loader.load_file(f'{str(exp_dir)}/temp/{gene}.arff')
         arff.class_is_last()
         # run each classifier
         for row in clf_calls.itertuples():
             _, clf, clf_str, opts = row
             clf_obj = Classifier(classname=clf_str, options=opts)
             evl = Evaluation(arff)
-            evl.crossvalidate_model(clf_obj, arff, n_folds, Random(rseed))
+            evl.crossvalidate_model(clf_obj, arff, len(arff), Random(rseed))
             mcc = evl.matthews_correlation_coefficient(1)
             if np.isnan(mcc):
                 mcc = 0
@@ -120,7 +122,8 @@ def _loo_worker(gene_split):
             fp = evl.num_false_positives(1)
             fn = evl.num_false_negatives(1)
             result_d[clf] = (tp, tn, fp, fn, mcc)
-        _append_results(f'worker-{wrk_idx}.results.csv', gene, result_d)
+        _append_results(exp_dir / 'temp' / f'worker-{wrk_idx}.results.csv', gene, result_d)
+        gene_arff_fn.unlink()
         n_done += 1
         if n_done % 100 == 0:
             print(f'Worker {wrk_idx}: {n_done} / {n_genes}')
@@ -135,12 +138,6 @@ def _append_results(worker_file, gene, gene_results):
             scores = [str(score) for score in scores]
             row = ','.join([gene, clf] + scores)
             f.write(f'{row}\n')
-
-
-def _split_matrix(expdir, design_matrix, test_genes):
-    # generate KFold groups for samples
-    for gene in test_genes:
-        design_matrix.write_arff(expdir / 'temp' / f'{gene}.arff', gene=gene)
 
 
 def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n_splits=10):
@@ -161,24 +158,24 @@ def run_weka(expdir, design_matrix, test_genes, n_workers, clf_info, seed=111, n
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
     gene_splits = np.array_split(np.array(test_genes), n_workers)
-    if n_splits != len(design_matrix):
+    if n_splits != -1:
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
         kf_splits = list(kf.split(design_matrix.X, design_matrix.y))
     else:
         kf_splits = None
+    matrix_splits = []
+    for split in gene_splits:
+        matrix_splits.append(design_matrix.get_genes(list(split)))
+    worker_args = enumerate(list(zip(gene_splits, matrix_splits)))
+
     # these are set as globals in the worker initializer
     global_args = [expdir, clf_info, n_splits, kf_splits, seed]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args, maxtasksperchild=1)
     try:
-        if n_splits == len(design_matrix):
-            _split_matrix(expdir, design_matrix, test_genes)
-            pool.map(_loo_worker, gene_splits)
+        if n_splits == -1:
+            pool.map(_loo_worker, worker_args)
         else:
-            matrix_splits = []
-            for split in gene_splits:
-                matrix_splits.append(design_matrix.get_genes(list(split)))
-            kfolds = enumerate(list(zip(gene_splits, matrix_splits)))
-            pool.map(_weka_worker, kfolds)
+            pool.map(_weka_worker, worker_args)
         pool.close()
         pool.join()
     except KeyboardInterrupt:
