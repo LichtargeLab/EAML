@@ -128,7 +128,7 @@ class Pipeline(object):
 
     def summarize_experiment(self):
         """Combines results from Weka experiment files"""
-        worker_files = self.expdir.glob('worker-*.results.csv')
+        worker_files = (self.expdir / 'temp').glob('worker-*.results.csv')
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
         if self.kfolds == -1:
@@ -166,8 +166,6 @@ class Pipeline(object):
 
     def cleanup(self):
         """Deletes intermediate worker files and temp directory."""
-        for i in range(self.threads):
-            os.remove(self.expdir / f'worker-{i}.results.csv')
         shutil.rmtree(self.expdir / 'temp/')
 
 
