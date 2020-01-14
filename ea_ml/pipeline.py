@@ -19,6 +19,8 @@ from itertools import product
 import numpy as np
 import pandas as pd
 from pysam import VariantFile
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
 
 from .utils import fetch_variants, load_matrix, convert_zygo
 from .design_matrix import DesignMatrix
@@ -39,7 +41,6 @@ class Pipeline(object):
         samples (list): List of samples to test
         test_genes (list): list of genes to test
         matrix (DesignMatrix): Object for containing feature information for each gene and sample
-        result_df (pd.DataFrame): The DataFrame that stores experiment results
         clf_info (DataFrame): A DataFrame mapping classifier names to their corresponding Weka object names and
             hyperparameters
         kfolds (int): Number of folds for cross-validation
@@ -73,7 +74,6 @@ class Pipeline(object):
             arr = np.ones((len(self.samples), len(self._gene_features)))
         self.matrix = DesignMatrix(arr, self.targets, self._gene_features, self.samples,
                                    feature_names=self.feature_names)
-        self.result_df = None
 
         # load classifier information
         self.clf_info = pd.read_csv(Path(__file__).parent / 'classifiers.csv',
@@ -139,14 +139,14 @@ class Pipeline(object):
         result_df.sort_values('gene', inplace=True)
         result_df.set_index(['gene', 'classifier'], inplace=True)
         result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
-        self.result_df = result_df
+        self.full_result_df = result_df
 
     def write_results(self):
         clf_d = OrderedDict([('gene', self.test_genes)])
 
         # write summary file for each classifier
         for clf in self.clf_info['classifier']:
-            clf_df = self.result_df.xs(clf, level='classifier')
+            clf_df = self.full_result_df.xs(clf, level='classifier')
             clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
             if self.kfolds == -1:
                 # if LOO, only a single MCC is present per gene
@@ -156,17 +156,31 @@ class Pipeline(object):
 
         # aggregate meanMCCs from each classifier
         mean_df = pd.DataFrame.from_dict(clf_d)
-        mean_df.to_csv(self.expdir / 'all-classifier_summary.csv', index=False)
+        mean_df.to_csv(self.expdir / 'all-classifier_means.csv', index=False)
 
         # fetch maxMCC for each gene and write final rankings file
         max_vals = mean_df.max(axis=1)
         final_df = pd.DataFrame({'gene': self.test_genes, 'maxMCC': max_vals})
         final_df.sort_values('maxMCC', ascending=False, inplace=True)
-        final_df.to_csv(self.expdir / 'maxMCC_summary.csv', index=False)
+        final_df.to_csv(self.expdir / 'maxMCC_results.csv', index=False)
+
+        # generate z-score and p-value stats
+        final_stats = compute_stats(final_df)
+        final_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
 
     def cleanup(self):
         """Deletes intermediate worker files and temp directory."""
         shutil.rmtree(self.expdir / 'temp/')
+
+
+def compute_stats(results_df):
+    """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
+    nonzero = results_df.loc[results_df.maxMCC != 0].copy()
+    nonzero['logMCC'] = np.log(nonzero.maxMCC + 1 - np.min(nonzero.maxMCC))
+    nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
+    nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
+    nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
+    return nonzero
 
 
 def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):

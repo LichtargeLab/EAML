@@ -15,7 +15,7 @@ from scipy.sparse import load_npz
 
 def refactor_EA(EA):
     """
-    Refactors EA to a list of floats and None.
+    Refactors EA to a list of floats and NaN.
 
     Args:
         EA (list/tuple): The EA scores parsed from a variant

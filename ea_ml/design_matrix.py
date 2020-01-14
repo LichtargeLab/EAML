@@ -34,8 +34,8 @@ class DesignMatrix(object):
         self.id_labels = id_labels
         self.X = X
         self.y = y
-        self._ft_map = OrderedDict((feature, i) for i, feature in enumerate(self.gene_features))
-        self._id_map = OrderedDict((ID, i) for i, ID in enumerate(id_labels))
+        self._ft_map = {feature: i for i, feature in enumerate(self.gene_features)}
+        self._id_map = {ID: i for i, ID in enumerate(id_labels)}
 
     def __len__(self):
         return self.X.shape[0]

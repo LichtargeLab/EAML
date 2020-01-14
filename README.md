@@ -64,7 +64,7 @@ Optional arguments:
 |----------------|-----------|---------------------------------------------------|
 | -t, --threads  | \<int\>   | experiment directory                              |
 | -s, --seed     | \<int\>   | VCF or .npz matrix                                |
-| -k, --kfolds   | \<int\>   | two-column CSV with sample IDs and disease status |
+| -k, --kfolds   | \<int\>   | number of cross-validation folds                  |
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
