@@ -54,12 +54,6 @@ class Pipeline(object):
         self.feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
         self.ft_cutoffs = list(product((1, 2), (1, 30, 70)))
 
-        # import tabix-indexed file if possible
-        if os.path.exists(str(self.data) + '.tbi'):
-            self.tabix = Path(str(self.data) + '.tbi')
-        else:
-            self.tabix = None
-
         # load feature and sample info
         sample_df = pd.read_csv(sample_f, header=None, dtype={0: str, 1: int}).sort_values(0)
         self.targets = np.array(sample_df[1])
@@ -108,7 +102,7 @@ class Pipeline(object):
 
     def process_vcf(self):
         """The overall method for processing the entire VCF file."""
-        vcf = VariantFile(self.data, index_filename=self.tabix)
+        vcf = VariantFile(self.data)
         vcf.subset_samples(self.samples)
         for contig in list(range(1, 23)) + ['X', 'Y']:
             try:
