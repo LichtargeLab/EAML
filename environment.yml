@@ -4,20 +4,20 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - bcftools=1.9
+  - bcftools=1.9=h16e57c4_7
+  - bzip2=1.0.6
   - htslib=1.9
   - java-jdk=8.0.92
   - matplotlib=3.1.1
   - numpy=1.16.2
   - pandas=0.24.1
-  - pip=19.0.3
   - pysam=0.15.2
-  - python=3.7.2
+  - python=3.7.6
   - samtools=1.9
   - scikit-learn=0.20.3
   - scipy=1.2.1
   - seaborn=0.9.0
-  - setuptools=41.0.1
+  - statsmodels=0.10.1
   - pip:
     - javabridge==1.0.18
     - python-weka-wrapper3==0.1.7

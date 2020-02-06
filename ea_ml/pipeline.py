@@ -36,7 +36,6 @@ class Pipeline(object):
         seed (int): Random seed for KFold sampling
         feature_names (tuple): The EA/zygosity feature labels for each gene
         ft_cutoffs (list): The EA/zygosity cutoffs for each feature
-        tabix (str): filepath to index file for VCF
         targets (np.ndarray): Array of target labels for training/prediction
         samples (list): List of samples to test
         test_genes (list): list of genes to test
