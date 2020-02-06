@@ -4,7 +4,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - bcftools=1.9=h16e57c4_7
+  - bcftools=1.9
   - bzip2=1.0.6
   - htslib=1.9
   - java-jdk=8.0.92
