@@ -42,10 +42,11 @@ export JAVA_HOME=${CONDA_PREFIX}/jre
 
 EA-ML can then be run by calling `ea-ml` and one of its commands:
 
-| command     | description                         |
-|-------------|-------------------------------------|
-| run         | run the EA-ML analysis              |
-| visualize   | visualize results of EA-ML analysis |
+| command     | description                                               |
+|-------------|-----------------------------------------------------------|
+| run         | run the EA-ML analysis                                    |
+| visualize   | visualize results of EA-ML analysis                       |
+| permute     | permute sample labels for evaluating confidence intervals |
 
 ### Main Pipeline
 
@@ -68,8 +69,28 @@ Optional arguments:
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
-## Input Requirements
+### Permutation Analysis
 
+Required arguments:
+
+| argument       | type          | description                                       |
+|----------------|---------------|---------------------------------------------------|
+| experiment_dir | \<directory\> | experiment directory                              |
+| data           | \<file\>      | VCF or .npz matrix                                |
+| samples        | \<file\>      | two-column CSV with sample IDs and disease status |
+| gene_list      | \<file\>      | single-column list of genes                       |
+| predictions    | \<file\>      | EA-ML results                                     |
+
+Optional arguments:
+
+| argument       | type      | description                                       |
+|----------------|-----------|---------------------------------------------------|
+| -t, --threads  | \<int\>   | experiment directory                              |
+| -s, --seed     | \<int\>   | VCF or .npz matrix                                |
+| -k, --kfolds   | \<int\>   | number of cross-validation folds                  |
+| -n, --n_runs   | \<int\>   | Number of permutations to include in distribution |
+
+## Input Requirements
 
 In order to use this pipeline properly, it requires 3 input files:
 

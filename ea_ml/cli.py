@@ -13,7 +13,7 @@ from pathlib import Path
 from . import VERSION, DESCRIPTION, CLI
 from .pipeline import run_ea_ml
 from .visualize import visualize
-from .shuffle import run_shuffling
+from .permute import run_permutations
 
 
 # noinspection PyTypeChecker
@@ -35,9 +35,9 @@ def main(args=None, function=None):
     sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
 
-    # Shuffle experiment parser
-    info = 'analyze significance of MCC scores through random shuffling'
-    sub = subs.add_parser('shuffle', help=info)
+    # Permutation experiment parser
+    info = 'analyze significance of MCC scores through label permutations'
+    sub = subs.add_parser('permute', help=info)
     sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
     sub.add_argument('data', type=Path, help='Path to VCF file')
     sub.add_argument('samples', type=Path, help='Path to samples list containing original corresponding labels')
@@ -47,7 +47,7 @@ def main(args=None, function=None):
     sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     sub.add_argument('-n', '--n_runs', type=int, default=100,
-                     help='Number of shuffling runs to include in distribution')
+                     help='Number of permutations to include in distribution')
 
     # Visualize parser
     info = 'visualize results of EA-ML analysis'
@@ -76,8 +76,8 @@ def _get_command(function, namespace):
         function = run_ea_ml
         args += [namespace.data, namespace.samples, namespace.gene_list]
         kwargs.update(threads=namespace.threads, seed=namespace.seed, kfolds=namespace.kfolds)
-    elif namespace.command == 'shuffle':
-        function = run_shuffling
+    elif namespace.command == 'permute':
+        function = run_permutations
         args += [namespace.data, namespace.samples, namespace.gene_list, namespace.predictions]
         kwargs.update(threads=namespace.threads, seed=namespace.seed, kfolds=namespace.kfolds, n_runs=namespace.n_runs)
     elif namespace.command == 'visualize':

@@ -1,3 +1,9 @@
+# 0.6.4 (2020-04-05)
+
+- Renamed `shuffle` command to `permute`
+- Added `permute` arguments to README
+- Fixed bug in permutation call that referenced top experiment directory instead of run-specific directory
+
 # 0.6.3 (2019-11-14)
 
 - Leave-One-Out is now specified by a `-1` argument to `--kfolds`
