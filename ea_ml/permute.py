@@ -56,26 +56,18 @@ def merge_runs(exp_dir, n_runs=100):
     return merged_df
 
 
-def _nonzero_shapiro(arr):
-    """
-    Removes MCCs that equal 0, as these skew the distribution and they are already removed from our
-    whole-genome comparison
-    """
-    filt_arr = np.array([x for x in arr if x != 0])
-    return stats.shapiro(filt_arr)[1]
-
-
 def compute_zscores(preds_path, perm_results):
     preds_df = pd.read_csv(preds_path, index_col='gene').sort_index()
     rand_means = perm_results.mean(axis=1)
     rand_stds = perm_results.std(axis=1)
-    norm_test = perm_results.apply(_nonzero_shapiro, axis=1)
+    pvals = perm_results.apply(lambda row: np.sum(row > preds_df.loc[row.name, 'maxMCC']) / perm_results.shape[1],
+                               axis=1)  # one-tailed test (effectively ignoring negative MCCs)
     rand_results = pd.DataFrame({
         'maxMCC': preds_df['maxMCC'],
         'rand_mean': rand_means,
         'rand_std': rand_stds,
         'zscore': (preds_df['maxMCC'] - rand_means) / rand_stds,
-        'shapiro_normality': norm_test
+        'pvalue': pvals
     }, index=preds_df.index)
     return rand_results
 
