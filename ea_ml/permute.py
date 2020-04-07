@@ -11,7 +11,6 @@ import shutil
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 from .pipeline import run_ea_ml
 
@@ -79,7 +78,7 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
         new_labels = permute_labels(samples, run_dir)
         run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds)
         if i == 1:
-            shutil.move(run_dir / 'design_matrix.npz', exp_dir)
+            shutil.move(str(run_dir / 'design_matrix.npz'), str(exp_dir))
         else:
             data = exp_dir / 'design_matrix.npz'
 
@@ -89,4 +88,4 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
     rand_results.to_csv(exp_dir / 'randomization_results.csv')
     (exp_dir / 'random_exp').mkdir()
     for i in range(1, n_runs + 1):
-        shutil.move(exp_dir / f'run{i}', exp_dir / 'random_exp')
+        shutil.move(str(exp_dir / f'run{i}'), str(exp_dir / 'random_exp'))
