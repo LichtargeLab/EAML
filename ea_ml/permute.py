@@ -77,10 +77,9 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
         run_dir.mkdir()
         new_labels = permute_labels(samples, run_dir)
         run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds)
-        if i == 1:
-            shutil.move(str(run_dir / 'design_matrix.npz'), str(exp_dir))
-        else:
+        if '.vcf' in str(data):
             data = exp_dir / 'design_matrix.npz'
+            shutil.move(str(data), str(exp_dir))
 
     perm_results = merge_runs(exp_dir, n_runs)
     perm_results.to_csv(exp_dir / 'random_distributions.csv')
