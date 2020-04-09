@@ -34,8 +34,6 @@ class Pipeline(object):
         expdir (Path): filepath to experiment folder
         data (Path): filepath to VCF file
         seed (int): Random seed for KFold sampling
-        feature_names (tuple): The EA/zygosity feature labels for each gene
-        ft_cutoffs (list): The EA/zygosity cutoffs for each feature
         targets (np.ndarray): Array of target labels for training/prediction
         samples (list): List of samples to test
         test_genes (list): list of genes to test
@@ -44,20 +42,21 @@ class Pipeline(object):
             hyperparameters
         kfolds (int): Number of folds for cross-validation
     """
+    feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
+    ft_cutoffs = list(product((1, 2), (1, 30, 70)))
+
     def __init__(self, expdir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
         self.threads = threads
         self.expdir = expdir
         self.data = data
         self.seed = seed
         self.kfolds = kfolds
-        self.feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
-        self.ft_cutoffs = list(product((1, 2), (1, 30, 70)))
 
         # load feature and sample info
         sample_df = pd.read_csv(sample_f, header=None, dtype={0: str, 1: int}).sort_values(0)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = sorted(list(pd.read_csv(gene_list, header=None, squeeze=True)))
+        self.test_genes = list(pd.read_csv(gene_list, header=None, squeeze=True))
         self._gene_features = [f'{gene}_{feature}' for gene in self.test_genes for feature in self.feature_names]
 
         # initialize design matrix
@@ -161,10 +160,6 @@ class Pipeline(object):
         final_stats = compute_stats(final_df)
         final_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
 
-    def cleanup(self):
-        """Deletes intermediate worker files and temp directory."""
-        shutil.rmtree(self.expdir / 'temp/')
-
 
 def compute_stats(results_df):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
@@ -176,7 +171,14 @@ def compute_stats(results_df):
     return nonzero
 
 
-def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10):
+def cleanup(expdir, keep_matrix=False):
+    """Deletes intermediate worker files and temp directory."""
+    shutil.rmtree(expdir / 'temp/')
+    if not keep_matrix:
+        (expdir / 'design_matrix.npz').unlink()
+
+
+def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10, keep_matrix=False):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
@@ -193,7 +195,7 @@ def run_ea_ml(exp_dir, data, sample_f, gene_list, threads=1, seed=111, kfolds=10
     pipeline.write_results()
     print('Gene scoring completed. Analysis summary in experiment directory.')
 
-    pipeline.cleanup()
+    cleanup(exp_dir, keep_matrix=keep_matrix)
     end = time.time()
     elapsed = str(datetime.timedelta(seconds=end - start))
     print(f'Time elapsed: {elapsed}')
