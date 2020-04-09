@@ -49,6 +49,7 @@ def main(args=None, function=None):
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     sub.add_argument('-n', '--n_runs', type=int, default=100,
                      help='Number of permutations to include in distribution')
+    sub.add_argument('-r', '--restart', type=int, default=0, help='run to restart permutations at')
 
     # Visualize parser
     info = 'visualize results of EA-ML analysis'
@@ -81,7 +82,8 @@ def _get_command(function, namespace):
     elif namespace.command == 'permute':
         function = run_permutations
         args += [namespace.data, namespace.samples, namespace.gene_list, namespace.predictions]
-        kwargs.update(threads=namespace.threads, seed=namespace.seed, kfolds=namespace.kfolds, n_runs=namespace.n_runs)
+        kwargs.update(threads=namespace.threads, seed=namespace.seed, kfolds=namespace.kfolds, n_runs=namespace.n_runs,
+                      restart=namespace.restart)
     elif namespace.command == 'visualize':
         function = visualize
         output = namespace.output

@@ -1,3 +1,7 @@
+# 0.6.5 (2020-04-09)
+
+- Added option to restart permutations from specified number
+
 # 0.6.4 (2020-04-05)
 
 - Renamed `shuffle` command to `permute`

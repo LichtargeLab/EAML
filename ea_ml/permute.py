@@ -71,8 +71,13 @@ def compute_zscores(preds_path, perm_results):
     return rand_results
 
 
-def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, seed=111, kfolds=10, n_runs=100):
-    for i in range(1, n_runs + 1):
+def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, seed=111, kfolds=10, n_runs=100,
+                     restart=0):
+    if restart > 0:  # restart permutation count from here
+        start = restart
+    else:  # the default, no restart
+        start = 0
+    for i in range(start, n_runs + 1):
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
         new_labels = permute_labels(samples, run_dir)

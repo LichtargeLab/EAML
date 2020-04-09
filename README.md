@@ -89,7 +89,8 @@ Optional arguments:
 | -t, --threads  | \<int\>   | experiment directory                              |
 | -s, --seed     | \<int\>   | VCF or .npz matrix                                |
 | -k, --kfolds   | \<int\>   | number of cross-validation folds                  |
-| -n, --n_runs   | \<int\>   | Number of permutations to include in distribution |
+| -n, --n_runs   | \<int\>   | number of permutations to include in distribution |
+| -r, --restart  | \<int\>   | restart permutations from this number             |
 
 ## Input Requirements
 
