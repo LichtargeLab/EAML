@@ -78,10 +78,15 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
     else:  # the default, no restart
         start = 0
     for i in range(start, n_runs + 1):
+        if i == n_runs:
+            keep_matrix = False
+        else:
+            keep_matrix = True
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
         new_labels = permute_labels(samples, run_dir)
-        run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds)
+        run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds,
+                  keep_matrix=keep_matrix)
         if '.vcf' in str(data):
             data = exp_dir / 'design_matrix.npz'
             shutil.move(str(data), str(exp_dir))
