@@ -44,10 +44,10 @@ def merge_runs(exp_dir, n_runs=100):
     Returns:
         merged_df (pd.DataFrame): A DataFrame of the random MCC distribution for each tested gene.
     """
-    merged_df = pd.read_csv(exp_dir / 'run1/maxMCC_summary.csv')
+    merged_df = pd.read_csv(exp_dir / 'run1/maxMCC_results.csv')
     merged_df.columns = ['gene', 'run1']
     for i in range(2, n_runs + 1):
-        df = pd.read_csv(exp_dir / f'run{i}/maxMCC_summary.csv')
+        df = pd.read_csv(exp_dir / f'run{i}/maxMCC_results.csv')
         df.columns = ['gene', f'run{i}']
         merged_df = merged_df.merge(df, on='gene')
     merged_df.sort_values(by='gene').reset_index(drop=True, inplace=True)
@@ -78,15 +78,10 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
     else:  # the default, no restart
         start = 0
     for i in range(start, n_runs + 1):
-        if i == n_runs:
-            keep_matrix = False
-        else:
-            keep_matrix = True
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
         new_labels = permute_labels(samples, run_dir)
-        run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds,
-                  keep_matrix=keep_matrix)
+        run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds, keep_matrix=True)
         if '.vcf' in str(data):
             data = exp_dir / 'design_matrix.npz'
             shutil.move(str(data), str(exp_dir))
@@ -94,7 +89,7 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
     perm_results = merge_runs(exp_dir, n_runs)
     perm_results.to_csv(exp_dir / 'random_distributions.csv')
     rand_results = compute_zscores(preds_path, perm_results)
-    rand_results.to_csv(exp_dir / 'randomization_results.csv')
-    (exp_dir / 'random_exp').mkdir()
+    rand_results.to_csv(exp_dir / 'permutation_results.csv')
+    (exp_dir / 'permute_exp').mkdir()
     for i in range(1, n_runs + 1):
-        shutil.move(str(exp_dir / f'run{i}'), str(exp_dir / 'random_exp'))
+        shutil.move(str(exp_dir / f'run{i}'), str(exp_dir / 'permute_exp'))
