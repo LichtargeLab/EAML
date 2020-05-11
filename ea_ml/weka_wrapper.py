@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-"""
-Created on 2019-04-17
-
-@author: dillonshapiro
-"""
+#!/usr/bin/env python
 import signal
 import sys
 from collections import defaultdict

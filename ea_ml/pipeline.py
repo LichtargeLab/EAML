@@ -1,13 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Created on 1/21/19
-
-@author: dillonshapiro
-
-Main script for EA-ML pipeline.
-"""
+#!/usr/bin/env python
+"""Main script for EA-ML pipeline."""
 import datetime
 import os
 import shutil

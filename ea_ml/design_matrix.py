@@ -1,13 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Created on 2019-01-28
-
-@author: dillonshapiro
-
-This contains the data used within the pipeline.
-"""
+#!/usr/bin/env python
+"""This contains the data used within the pipeline"""
 from collections import OrderedDict
 
 from scipy.sparse import save_npz, csr_matrix

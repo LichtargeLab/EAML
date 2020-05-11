@@ -1,11 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Created on 2019-01-28
-
-@author: dillonshapiro
-"""
+#!/usr/bin/env python
 import re
 from collections import defaultdict
 

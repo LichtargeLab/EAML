@@ -1,4 +1,4 @@
-"""Package for pyEA-ML."""
+"""Package for pyEA-ML"""
 
 __project__ = 'ea_ml'
 __version__ = '0.6.2'

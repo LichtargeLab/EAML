@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
-Created on 9/26/19
-
-@author: dillonshapiro
-
 Functions that run a permutation experiment to assign significance z-score/p-value to top predictions from
 EA-ML analysis.
 """

@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-"""
-Created on 9/20/19
-
-@author: dillonshapiro
-"""
+#!/usr/bin/env python
 import os
 import setuptools
 

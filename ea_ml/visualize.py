@@ -1,11 +1,5 @@
-#!/usr/bin/env python3
-"""
-Created on 9/23/19
-
-@author: dillonshapiro
-
-Functions for visualizing EA-ML results.
-"""
+#!/usr/bin/env python
+"""Functions for visualizing EA-ML results"""
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns

@@ -1,11 +1,5 @@
-#!/usr/bin/env python3
-"""
-Created on 9/20/19
-
-@author: dillonshapiro
-
-Command-line interface for pyEA-ML.
-"""
+#!/usr/bin/env python
+"""Command-line interface for pyEA-ML"""
 import sys
 import argparse
 from pathlib import Path
