@@ -106,6 +106,8 @@ def _split_genes(rec):
     elif len(score) == 1:
         for g in genes:
             ea_d[g].append(score[0])
+    elif len(genes) == 1:
+        ea_d[genes[0]] = score
     else:
         raise ValueError('Size of values list does not match expected case.')
 
