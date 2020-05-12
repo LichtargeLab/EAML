@@ -1,7 +1,7 @@
 """Package for pyEA-ML"""
 
 __project__ = 'pyEA-ML'
-__version__ = '0.6.5'
+__version__ = '0.7.0'
 
 CLI = 'ea-ml'
 NAME = 'EA - Machine Learning Pipeline'
