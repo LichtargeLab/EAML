@@ -1,3 +1,8 @@
+# 0.7.0 (2020-05-12)
+
+- Added visualizations for non-zero MCC distribution and log-transformed MCCs
+- `bumpversion` now used to control version labeling
+
 # 0.6.5 (2020-04-09)
 
 - Added option to restart permutations from specified number

@@ -49,9 +49,9 @@ def main(args=None, function=None):
     info = 'visualize results of EA-ML analysis'
     sub = subs.add_parser('visualize', help=info)
     sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
-    sub.add_argument('--dpi', default=150, help='DPI for output figures')
+    sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
     sub.add_argument('-o', '--output', type=Path, help='location to output figures')
-    sub.add_argument('-p', '--prefix', default='maxMCC', help='prefix for outfit files')
+    sub.add_argument('-p', '--prefix', default='', help='prefix for output files')
 
     # Parse arguments
     namespace = parser.parse_args(args=args)

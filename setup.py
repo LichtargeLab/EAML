@@ -2,7 +2,7 @@
 import os
 import setuptools
 
-from ea_ml import __project__, __version__, CLI, DESCRIPTION
+from ea_ml import NAME, __version__, CLI, DESCRIPTION
 
 if os.path.exists('README.md'):
     README = open('README.md').read()
@@ -11,7 +11,7 @@ else:
 CHANGES = open('CHANGELOG.md').read()
 
 setuptools.setup(
-    name=__project__,
+    name=NAME,
     version=__version__,
     description=DESCRIPTION,
     author='Dillon Shapiro',
