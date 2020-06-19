@@ -5,13 +5,13 @@ channels:
   - defaults
 dependencies:
   - bcftools=1.9
-  - bumpversion
   - bzip2=1.0.6
   - htslib=1.9
   - java-jdk=8.0.92
   - matplotlib=3.1.1
   - numpy=1.16.2
   - pandas=0.24.1
+  - pip=20.0.2
   - pysam=0.15.2
   - python=3.7.6
   - samtools=1.9

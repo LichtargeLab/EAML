@@ -34,7 +34,7 @@ if [[ ${ENVS} != *${ENV_NAME}* ]]; then
     conda create -n ${ENV_NAME} -c bioconda python=3.7 java-jdk=8.0.92
     source activate ${ENV_NAME}
     export JAVA_HOME=${CONDA_PREFIX}/jre
-    conda env update -f ${repSource}/environment.yml
+    conda env update -f ${repSource}/environment.yml -n ${ENV_NAME}
     pip install -e ${repSource}
 else
     echo "pyEA-ML environment already installed."
