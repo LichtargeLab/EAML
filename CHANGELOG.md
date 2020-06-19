@@ -1,3 +1,7 @@
+# 0.7.2 (2020-06-19)
+
+- Fixed bug where unsorted input genes weren't mapped correctly to results
+
 # 0.7.1 (2020-06-19)
 
 - Added summary results files for mean MCC scores

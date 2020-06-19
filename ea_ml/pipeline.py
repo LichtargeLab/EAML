@@ -48,7 +48,7 @@ class Pipeline(object):
         sample_df = pd.read_csv(sample_f, header=None, dtype={0: str, 1: int}).sort_values(0)
         self.targets = np.array(sample_df[1])
         self.samples = list(sample_df[0])
-        self.test_genes = list(pd.read_csv(gene_list, header=None, squeeze=True))
+        self.test_genes = list(pd.read_csv(gene_list, header=None, squeeze=True).sort_values())
         self._gene_features = [f'{gene}_{feature}' for gene in self.test_genes for feature in self.feature_names]
 
         # initialize design matrix
@@ -120,7 +120,7 @@ class Pipeline(object):
         else:
             result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(self.kfolds)]
             result_df['meanMCC'] = result_df.mean(axis=1)
-        result_df.sort_values('gene', inplace=True)
+        result_df.sort_values(['gene', 'classifier'], inplace=True)
         result_df.set_index(['gene', 'classifier'], inplace=True)
         result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
         self.full_result_df = result_df
