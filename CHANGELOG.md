@@ -1,3 +1,7 @@
+# 0.7.1 (2020-06-19)
+
+- Added summary results files for mean MCC scores
+
 # 0.7.0 (2020-05-12)
 
 - Added visualizations for non-zero MCC distribution and log-transformed MCCs

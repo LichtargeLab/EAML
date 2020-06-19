@@ -2,7 +2,7 @@
 
 The Python version of the lab EA-ML pipeline.
 
-This pipeline uses a series of supervised learning algorithms to score a gene's contribution to disease risk based on
+This pipeline uses an ensemble of supervised learning algorithms to score a gene's contribution to disease risk based on
 it's case/control separation ability. This is all based on a probability score (pEA) computed using EA.
 
 The output is a ranked list of genes scored by the Matthew's Correlation Coefficient (MCC), effectively using

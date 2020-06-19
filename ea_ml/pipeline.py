@@ -139,24 +139,30 @@ class Pipeline(object):
                 clf_d[clf] = list(clf_df['meanMCC'])
 
         # aggregate meanMCCs from each classifier
-        mean_df = pd.DataFrame.from_dict(clf_d)
-        mean_df.to_csv(self.expdir / 'all-classifier_means.csv', index=False)
+        cv_df = pd.DataFrame.from_dict(clf_d)
+        cv_df.to_csv(self.expdir / 'all-classifier_means.csv', index=False)
 
-        # fetch maxMCC for each gene and write final rankings file
-        max_vals = mean_df.max(axis=1)
-        final_df = pd.DataFrame({'gene': self.test_genes, 'maxMCC': max_vals})
-        final_df.sort_values('maxMCC', ascending=False, inplace=True)
-        final_df.to_csv(self.expdir / 'maxMCC_results.csv', index=False)
+        # fetch max and mean MCC for each gene and write final rankings files
+        maxMCC_df = pd.DataFrame({'gene': self.test_genes, 'maxMCC': cv_df.max(axis=1)})
+        maxMCC_df.sort_values('maxMCC', ascending=False, inplace=True)
+        maxMCC_df.to_csv(self.expdir / 'maxMCC_results.csv', index=False)
+
+        meanMCC_df = pd.DataFrame({'gene': self.test_genes, 'meanMCC': cv_df.mean(axis=1), 'std': cv_df.std(axis=1)})
+        meanMCC_df.sort_values('meanMCC', ascending=False, inplace=True)
+        meanMCC_df.to_csv(self.expdir / 'meanMCC_results.csv', index=False)
 
         # generate z-score and p-value stats
-        final_stats = compute_stats(final_df)
-        final_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
+        max_stats = compute_stats(maxMCC_df, transform=True)
+        max_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
+        mean_stats = compute_stats(meanMCC_df, transform=False)
+        mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv', index=False)
 
 
-def compute_stats(results_df):
+def compute_stats(results_df, transform=False):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
     nonzero = results_df.loc[results_df.maxMCC != 0].copy()
-    nonzero['logMCC'] = np.log(nonzero.maxMCC + 1 - np.min(nonzero.maxMCC))
+    if transform:
+        nonzero['logMCC'] = np.log(nonzero.maxMCC + 1 - np.min(nonzero.maxMCC))
     nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
     nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
     nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
