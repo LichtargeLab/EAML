@@ -152,17 +152,16 @@ class Pipeline(object):
         meanMCC_df.to_csv(self.expdir / 'meanMCC_results.csv', index=False)
 
         # generate z-score and p-value stats
-        max_stats = compute_stats(maxMCC_df, transform=True)
+        max_stats = compute_stats(maxMCC_df, ensemble_type='max')
         max_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
-        mean_stats = compute_stats(meanMCC_df, transform=False)
+        mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
         mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv', index=False)
 
 
-def compute_stats(results_df, transform=False):
+def compute_stats(results_df, ensemble_type='max'):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
-    nonzero = results_df.loc[results_df.maxMCC != 0].copy()
-    if transform:
-        nonzero['logMCC'] = np.log(nonzero.maxMCC + 1 - np.min(nonzero.maxMCC))
+    nonzero = results_df.loc[results_df[f'{ensemble_type}MCC'] != 0].copy()
+    nonzero['logMCC'] = np.log(nonzero[f'{ensemble_type}MCC'] + 1 - np.min(nonzero.maxMCC))
     nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
     nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
     nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]

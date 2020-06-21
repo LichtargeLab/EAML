@@ -44,6 +44,7 @@ def main(args=None, function=None):
     sub.add_argument('-n', '--n_runs', type=int, default=100,
                      help='Number of permutations to include in distribution')
     sub.add_argument('-r', '--restart', type=int, default=0, help='run to restart permutations at')
+    sub.add_argument('-c', '--clean', action='store_true', help='clean design matrix and permutation files')
 
     # Visualize parser
     info = 'visualize results of EA-ML analysis'
@@ -77,7 +78,7 @@ def _get_command(function, namespace):
         function = run_permutations
         args += [namespace.data, namespace.samples, namespace.gene_list, namespace.predictions]
         kwargs.update(threads=namespace.threads, seed=namespace.seed, kfolds=namespace.kfolds, n_runs=namespace.n_runs,
-                      restart=namespace.restart)
+                      restart=namespace.restart, clean=namespace.clean)
     elif namespace.command == 'visualize':
         function = visualize
         output = namespace.output

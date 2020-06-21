@@ -91,6 +91,23 @@ Optional arguments:
 | -k, --kfolds   | \<int\>   | number of cross-validation folds                  |
 | -n, --n_runs   | \<int\>   | number of permutations to include in distribution |
 | -r, --restart  | \<int\>   | restart permutations from this number             |
+| -c, --clean    | \<bool\>  | clean design matrix and permutation files         |
+
+### Visualize experimental results
+
+Required arguments:
+
+| argument       | type          | description          |
+|----------------|---------------|----------------------|
+| experiment_dir | \<directory\> | experiment directory |
+
+Optional arguments:
+
+| argument       | type          | description                    |
+|----------------|---------------|--------------------------------|
+| --dpi          | \<int\>       | DPI for output figures         |
+| -o, --output   | \<directory\> | location to output figures     |
+| -p, --prefix   | \<str\>       | prefix for output file names   |
 
 ## Input Requirements
 

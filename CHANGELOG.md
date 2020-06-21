@@ -1,3 +1,9 @@
+# 0.7.3 (2020-06-21)
+
+- Fixed bug in correctly calculating stats for meanMCC results
+- Added meanMCC calculations to permutation analysis
+- Visualization options added to README
+
 # 0.7.2 (2020-06-19)
 
 - Fixed bug where unsorted input genes weren't mapped correctly to results

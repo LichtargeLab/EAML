@@ -29,21 +29,22 @@ def permute_labels(df_path, run_dir):
     return perm_labels_path
 
 
-def merge_runs(exp_dir, n_runs=100):
+def merge_runs(exp_dir, n_runs=100, ensemble_type='max'):
     """
     Merges all of the randomized runs into a single DataFrame.
 
     Args:
         exp_dir (Path): Path to the main experiment folder.
         n_runs (int): Number of permutations to incorporate into the random distributions.
+        ensemble_type (str): Whether model scores are ensembled by max or mean
 
     Returns:
         merged_df (pd.DataFrame): A DataFrame of the random MCC distribution for each tested gene.
     """
-    merged_df = pd.read_csv(exp_dir / 'run1/maxMCC_results.csv')
+    merged_df = pd.read_csv(exp_dir / f'run1/{ensemble_type}MCC_results.csv')
     merged_df.columns = ['gene', 'run1']
     for i in range(2, n_runs + 1):
-        df = pd.read_csv(exp_dir / f'run{i}/maxMCC_results.csv')
+        df = pd.read_csv(exp_dir / f'run{i}/{ensemble_type}MCC_results.csv')
         df.columns = ['gene', f'run{i}']
         merged_df = merged_df.merge(df, on='gene')
     merged_df.sort_values(by='gene').reset_index(drop=True, inplace=True)
@@ -51,24 +52,26 @@ def merge_runs(exp_dir, n_runs=100):
     return merged_df
 
 
-def compute_zscores(preds_path, perm_results):
+def compute_zscores(preds_path, perm_results, ensemble_type='max'):
     preds_df = pd.read_csv(preds_path, index_col='gene').sort_index()
     rand_means = perm_results.mean(axis=1)
     rand_stds = perm_results.std(axis=1)
-    pvals = perm_results.apply(lambda row: np.sum(row > preds_df.loc[row.name, 'maxMCC']) / perm_results.shape[1],
-                               axis=1)  # one-tailed test (effectively ignoring negative MCCs)
+    pvals = perm_results.apply(
+        lambda row: np.sum(row > preds_df.loc[row.name, f'{ensemble_type}MCC']) / perm_results.shape[1],
+        axis=1
+    )  # one-tailed test (effectively ignoring negative MCCs)
     rand_results = pd.DataFrame({
-        'maxMCC': preds_df['maxMCC'],
+        f'{ensemble_type}MCC': preds_df[f'{ensemble_type}MCC'],
         'rand_mean': rand_means,
         'rand_std': rand_stds,
-        'zscore': (preds_df['maxMCC'] - rand_means) / rand_stds,
+        'zscore': (preds_df[f'{ensemble_type}MCC'] - rand_means) / rand_stds,
         'pvalue': pvals
     }, index=preds_df.index)
     return rand_results
 
 
 def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, seed=111, kfolds=10, n_runs=100,
-                     restart=0):
+                     restart=0, clean=False):
     if restart > 0:  # restart permutation count from here
         start = restart
     else:  # the default, no restart
@@ -81,11 +84,21 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
         if '.vcf' in str(data):
             data = exp_dir / 'design_matrix.npz'
             shutil.move(str(data), str(exp_dir))
-
-    perm_results = merge_runs(exp_dir, n_runs)
-    perm_results.to_csv(exp_dir / 'random_distributions.csv')
-    rand_results = compute_zscores(preds_path, perm_results)
-    rand_results.to_csv(exp_dir / 'permutation_results.csv')
-    (exp_dir / 'permute_exp').mkdir()
-    for i in range(1, n_runs + 1):
-        shutil.move(str(exp_dir / f'run{i}'), str(exp_dir / 'permute_exp'))
+    # aggregate background distributions
+    perm_dist_max = merge_runs(exp_dir, n_runs, ensemble_type='max')
+    perm_dist_max.to_csv(exp_dir / 'random_distributions.maxMCC.csv')
+    perm_dist_mean = merge_runs(exp_dir, n_runs, ensemble_type='mean')
+    perm_dist_mean.to_csv(exp_dir / 'random_distributions.meanMCC.csv')
+    # compute stats on observed score vs. background
+    perm_stats_max = compute_zscores(preds_path, perm_dist_max)
+    perm_stats_max.to_csv(exp_dir / 'permutation_results.maxMCC.csv')
+    perm_stats_mean = compute_zscores(preds_path, perm_dist_mean)
+    perm_stats_mean.to_csv(exp_dir / 'permutation_results.meanMCC.csv')
+    if clean:
+        data.unlink()
+        for i in range(1, n_runs + 1):
+            shutil.rmtree(str(exp_dir / f'run{i}'), ignore_errors=True)
+    else:
+        (exp_dir / 'permute_exp').mkdir()
+        for i in range(1, n_runs + 1):
+            shutil.move(str(exp_dir / f'run{i}'), str(exp_dir / 'permute_exp'))
