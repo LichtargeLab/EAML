@@ -161,7 +161,7 @@ class Pipeline(object):
 def compute_stats(results_df, ensemble_type='max'):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
     nonzero = results_df.loc[results_df[f'{ensemble_type}MCC'] != 0].copy()
-    nonzero['logMCC'] = np.log(nonzero[f'{ensemble_type}MCC'] + 1 - np.min(nonzero.maxMCC))
+    nonzero['logMCC'] = np.log(nonzero[f'{ensemble_type}MCC'] + 1 - np.min(nonzero[f'{ensemble_type}MCC']))
     nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
     nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
     nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
