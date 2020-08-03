@@ -1,3 +1,7 @@
+# 0.7.4 (2020-08-03)
+
+- Added visualizations for meanMCC rankings
+
 # 0.7.3 (2020-06-21)
 
 - Fixed bug in correctly calculating stats for meanMCC results

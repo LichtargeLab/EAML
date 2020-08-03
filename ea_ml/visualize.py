@@ -42,7 +42,7 @@ def mcc_hist(results, column='maxMCC', dpi=150):
     Returns:
         Figure
     """
-    weights = np.zeros_like(results.maxMCC) + 1 / len(results)
+    weights = np.zeros(len(results)) + 1 / len(results)
 
     fig = plt.figure(dpi=dpi)
     plt.hist(results[column], weights=weights, bins=20, color='black')
@@ -57,12 +57,13 @@ def visualize(exp_dir, out_dir, prefix='', dpi=150):
     if prefix:
         prefix = prefix + '.'
 
-    results = pd.read_csv(exp_dir / 'maxMCC_results.csv').sort_values('maxMCC', ascending=False)
-    mcc_scatter(results, dpi=dpi).savefig(out_dir / f'{prefix}maxMCC-scatter.png')
-    mcc_hist(results, dpi=dpi).savefig(out_dir / f'{prefix}maxMCC-hist.png')
+    for col in ('maxMCC', 'meanMCC'):
+        results = pd.read_csv(exp_dir / f'{col}_results.csv').sort_values(col, ascending=False)
+        mcc_scatter(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.png')
+        mcc_hist(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.png')
 
-    stat_results = pd.read_csv(exp_dir / 'maxMCC_results.nonzero-stats.csv').sort_values('maxMCC', ascending=False)
-    mcc_scatter(stat_results, dpi=dpi).savefig(out_dir / f'{prefix}maxMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, dpi=dpi).savefig(out_dir / f'{prefix}maxMCC-hist.nonzero.png')
-    mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}logMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}logMCC-hist.nonzero.png')
+        stat_results = pd.read_csv(exp_dir / f'{col}_results.nonzero-stats.csv').sort_values(col, ascending=False)
+        mcc_scatter(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.nonzero.png')
+        mcc_hist(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.nonzero.png')
+        mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}{col}.logMCC-scatter.nonzero.png')
+        mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}{col}.logMCC-hist.nonzero.png')
