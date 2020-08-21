@@ -20,15 +20,15 @@ setuptools.setup(
     entry_points={'console_scripts': [f'{CLI} = ea_ml.cli:main']},
     long_description=f'{README}\n{CHANGES}',
     install_requires=[
-        'javabridge==1.0.18',
-        'matplotlib==3.1.1',
-        'numpy==1.16.2',
-        'pandas==0.24.1',
-        'pysam==0.15.2',
-        'python-weka-wrapper3==0.1.7',
-        'scikit-learn==0.20.3',
+        'javabridge>=1.0.18',
+        'matplotlib>=3.1.1',
+        'numpy>=1.16.2',
+        'pandas>=0.24.1',
+        'pysam>=0.15.2',
+        'python-weka-wrapper3>=0.1.7',
+        'scikit-learn>=0.20.3',
         'scipy==1.2.1',
-        'seaborn==0.9.0',
+        'seaborn>=0.9.0',
         'statsmodels==0.10.1'
     ],
     include_package_data=True
