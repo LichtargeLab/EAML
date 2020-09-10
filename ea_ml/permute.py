@@ -70,7 +70,7 @@ def compute_zscores(preds_path, perm_results, ensemble_type='max'):
     return rand_results
 
 
-def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, seed=111, kfolds=10, n_runs=100,
+def run_permutations(exp_dir, data, samples, gene_list, preds_path, n_jobs=1, seed=111, kfolds=10, n_runs=100,
                      restart=0, clean=False):
     if restart > 0:  # restart permutation count from here
         start = restart
@@ -80,9 +80,9 @@ def run_permutations(exp_dir, data, samples, gene_list, preds_path, threads=1, s
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
         new_labels = permute_labels(samples, run_dir)
-        run_ea_ml(run_dir, data, new_labels, gene_list, threads=threads, seed=seed, kfolds=kfolds, keep_matrix=True)
+        run_ea_ml(run_dir, data, new_labels, gene_list, n_jobs=n_jobs, seed=seed, kfolds=kfolds, keep_matrix=True)
         if '.vcf' in str(data):
-            data = exp_dir / 'design_matrix.npz'
+            data = exp_dir / 'design_matrix.csv.bz2'
             shutil.move(str(data), str(exp_dir))
     # aggregate background distributions
     perm_dist_max = merge_runs(exp_dir, n_runs, ensemble_type='max')
