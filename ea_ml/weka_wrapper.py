@@ -14,13 +14,13 @@ from weka.core.classes import Random
 
 
 # noinspection PyGlobalUndefined
-def _init_worker(expdir, y, clf_info, n_splits, kf_splits, seed=111):
+def _init_worker(expdir, targets, clf_info, n_splits, kf_splits, seed=111):
     """
     Initializes each worker process. This makes some information available as shared memory.
 
     Args:
         expdir (Path): Path to experiment directory
-        y (Series): disease status labels
+        targets (Series): target labels
         clf_info (DataFrame): DataFrame of Weka classifiers, their Weka object names, and hyperparameters
         n_splits (int): Number of splits used for cross-validation
         kf_splits (list): List of tuples containing train/test indices for each fold
@@ -28,8 +28,8 @@ def _init_worker(expdir, y, clf_info, n_splits, kf_splits, seed=111):
     """
     global exp_dir
     exp_dir = expdir
-    global targets
-    targets = y
+    global y
+    y = targets
     global clf_calls
     clf_calls = clf_info
     global n_folds
@@ -59,8 +59,8 @@ def _weka_worker(gene_split):
             # write intermediate train and test arffs
             train_fn = exp_dir / 'tmp' / f'{gene}_{i}-train.arff'
             test_fn = exp_dir / 'tmp' / f'{gene}_{i}-test.arff'
-            write_arff(gene_X.iloc[train], targets.iloc[train], gene, train_fn, row_idxs=train)
-            write_arff(gene_X.iloc[test], targets.iloc[test], gene, test_fn, row_idxs=test)
+            write_arff(gene_X.iloc[train], y.iloc[train], gene, train_fn, row_idxs=train)
+            write_arff(gene_X.iloc[test], y.iloc[test], gene, test_fn, row_idxs=test)
 
             # load train and test arffs
             loader = Loader(classname='weka.core.converters.ArffLoader')
@@ -100,7 +100,7 @@ def _loo_worker(gene_split):
     for gene in genes:
         result_d = {}
         gene_arff_fn = exp_dir / 'tmp' / f'{gene}.arff'
-        write_arff(X, targets, gene, gene_arff_fn)
+        write_arff(X, y, gene, gene_arff_fn)
         loader = Loader(classname='weka.core.converters.ArffLoader')
         arff = loader.load_file(f'{str(exp_dir)}/tmp/{gene}.arff')
         arff.class_is_last()
@@ -136,16 +136,15 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def run_weka(expdir, X, y, test_genes, n_workers, clf_info, seed=111, n_splits=10):
+def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_splits=10):
     """
     The overall Weka experiment. The steps include loading the K .arff files for each gene, building a new classifier
     based on the training set, then evaluating the model on the test set and outputting the MCC to a dictionary.
 
     Args:
         expdir (Path): Path to experiment directory.
-        X (DataFrame): design matrix
-        y (Series): disease labels for samples
-        test_genes (list): The list of genes being tested.
+        design_matrix (DataFrame): design matrix computed from VCF
+        targets (Series): target labels
         n_workers (int): Number of workers to generate in multiprocessing Pool.
         clf_info (DataFrame): Info about classifiers and their parameters.
         seed (int): Random seed for generating KFold samples.
@@ -154,19 +153,19 @@ def run_weka(expdir, X, y, test_genes, n_workers, clf_info, seed=111, n_splits=1
     (expdir / 'tmp').mkdir(exist_ok=True)
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
-    gene_splits = np.array_split(np.array(test_genes), n_workers)
+    gene_splits = np.array_split(list(targets.index), n_workers)
     if n_splits != -1:
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-        kf_splits = list(kf.split(X, y))
+        kf_splits = list(kf.split(design_matrix, targets))
     else:
         kf_splits = None
     matrix_splits = []
     for split in gene_splits:
-        matrix_splits.append(X[split])
+        matrix_splits.append(design_matrix[split])
     worker_args = enumerate(list(zip(gene_splits, matrix_splits)))
 
     # these are set as globals in the worker initializer
-    global_args = [expdir, y, clf_info, n_splits, kf_splits, seed]
+    global_args = [expdir, targets, clf_info, n_splits, kf_splits, seed]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args, maxtasksperchild=1)
     try:
         if n_splits == -1:
@@ -182,13 +181,13 @@ def run_weka(expdir, X, y, test_genes, n_workers, clf_info, seed=111, n_splits=1
         sys.exit(1)
 
 
-def write_arff(X, y, gene, f_out, row_idxs=None):
+def write_arff(design_matrix, targets, gene, f_out, row_idxs=None):
     """
         Outputs an .arff file corresponding to the DataFrame
 
         Args:
-            X (DataFrame): design matrix from VCF
-            y (Series): disease labels
+            design_matrix (DataFrame): design matrix from VCF
+            targets (Series): disease labels
             gene (str): gene to subset from matrix
             f_out (Path): filepath for the output
             row_idxs (list-like): specifies specific samples to write to output
@@ -199,16 +198,16 @@ def write_arff(X, y, gene, f_out, row_idxs=None):
             example.append(str(label))
             f.write(','.join(example) + '\n')
 
-    matrix = X[gene]
+    gene_X = design_matrix[gene]
     with open(f_out, 'w') as f:
         relation = f_out.stem
         f.write(f'@relation {relation}\n')
-        for ft in matrix.columns:
+        for ft in gene_X.columns:
             f.write(f'@attribute {ft} REAL\n')
         f.write('@attribute class {0,1}\n')
         f.write('@data\n')
         if row_idxs:
-            rows = zip(matrix.iloc[row_idxs].values, y.iloc[row_idxs].values)
+            rows = zip(gene_X.iloc[row_idxs].values, targets.iloc[row_idxs].values)
         else:
-            rows = zip(matrix.values, y.values)
+            rows = zip(gene_X.values, targets.values)
         _write_rows(rows)

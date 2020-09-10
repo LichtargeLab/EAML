@@ -4,12 +4,12 @@ import datetime
 import os
 import shutil
 import time
-from collections import OrderedDict
 from itertools import product
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pkg_resources import resource_filename
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
@@ -24,9 +24,8 @@ class Pipeline(object):
         expdir (Path): filepath to experiment folder
         data_fn (Path): filepath to data input file (either a VCF or multi-indexed DataFrame)
         seed (int): Random seed for KFold sampling
-        targets (np.ndarray): Array of target labels for training/prediction
-        samples (list): List of samples to test
-        test_genes (list): list of genes to test
+        targets (Series): Array of target labels for training/prediction
+        reference (DataFrame): reference background for genes
         matrix (DesignMatrix): Object for containing feature information for each gene and sample
         clf_info (DataFrame): A DataFrame mapping classifier names to their corresponding Weka object names and
             hyperparameters
@@ -35,21 +34,17 @@ class Pipeline(object):
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
 
-    def __init__(self, expdir, data_fn, sample_fn, gene_list, n_jobs=1, seed=111, kfolds=10):
+    def __init__(self, expdir, data_fn, sample_targets, reference, n_jobs=1, seed=111, kfolds=10):
         self.n_jobs = n_jobs
         self.expdir = expdir
         self.data_fn = data_fn
+        self.targets = sample_targets
+        self.reference = reference
         self.seed = seed
         self.kfolds = kfolds
 
-        # load feature and sample info
-        sample_df = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}).sort_values(0)
-        self.targets = sample_df[1]
-        self.samples = list(sample_df[0])
-        self.test_genes = list(pd.read_csv(gene_list, header=None, squeeze=True).sort_values())
-
         # load classifier information
-        self.clf_info = pd.read_csv(Path(__file__).parent / 'classifiers.csv',
+        self.clf_info = pd.read_csv(resource_filename('ea_ml', 'data/classifiers.csv'),
                                     converters={'options': lambda x: x[1:-1].split(',')})
         # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
         if self.kfolds == -1:
@@ -57,7 +52,7 @@ class Pipeline(object):
 
     def compute_matrix(self):
         """Computes the full design matrix from an input VCF"""
-        self.matrix = 1 - parse_vcf(self.data_fn, self.reference, self.samples, n_jobs=self.n_jobs)
+        self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs)
         self.matrix.to_csv('design_matrix.csv.bz2')
 
     def load_matrix(self):
@@ -66,12 +61,12 @@ class Pipeline(object):
 
     def run_weka_exp(self):
         """Wraps call to weka_wrapper functions"""
-        run_weka(self.expdir, self.matrix, self.targets, self.test_genes, self.n_jobs, self.clf_info, seed=self.seed,
+        run_weka(self.expdir, self.matrix, self.targets, self.n_jobs, self.clf_info, seed=self.seed,
                  n_splits=self.kfolds)
 
     def summarize_experiment(self):
         """Combines results from Weka experiment files"""
-        worker_files = (self.expdir / 'temp').glob('worker-*.results.csv')
+        worker_files = (self.expdir / 'tmp').glob('worker-*.results.csv')
         dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
         result_df = pd.concat(dfs, ignore_index=True)
         if self.kfolds == -1:
@@ -85,36 +80,33 @@ class Pipeline(object):
         self.full_result_df = result_df
 
     def write_results(self):
-        clf_d = OrderedDict([('gene', self.test_genes)])
+        cv_df = pd.DataFrame(index=self.reference.index)
 
-        # write summary file for each classifier
+        # write summary file for each classifier and aggregate mean MCCs
         for clf in self.clf_info['classifier']:
             clf_df = self.full_result_df.xs(clf, level='classifier')
             clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
             if self.kfolds == -1:
                 # if LOO, only a single MCC is present per gene
-                clf_d[clf] = list(clf_df['MCC'])
+                cv_df[clf] = clf_df['MCC']
             else:
-                clf_d[clf] = list(clf_df['meanMCC'])
-
-        # aggregate meanMCCs from each classifier
-        cv_df = pd.DataFrame.from_dict(clf_d)
+                cv_df[clf] = clf_df['meanMCC']
         cv_df.to_csv(self.expdir / 'all-classifier_means.csv', index=False)
 
         # fetch max and mean MCC for each gene and write final rankings files
-        maxMCC_df = pd.DataFrame({'gene': self.test_genes, 'maxMCC': cv_df.max(axis=1)})
-        maxMCC_df.sort_values('maxMCC', ascending=False, inplace=True)
-        maxMCC_df.to_csv(self.expdir / 'maxMCC_results.csv', index=False)
+        maxMCC_df = cv_df.max(axis=1).sort_values(ascending=False).to_frame(name='maxMCC')
+        maxMCC_df.to_csv(self.expdir / 'maxMCC_results.csv')
 
-        meanMCC_df = pd.DataFrame({'gene': self.test_genes, 'meanMCC': cv_df.mean(axis=1), 'std': cv_df.std(axis=1)})
+        meanMCC_df = pd.concat([cv_df.mean(axis=1), cv_df.std(axis=1)], axis=1)
+        meanMCC_df.columns = ['meanMCC', 'std']
         meanMCC_df.sort_values('meanMCC', ascending=False, inplace=True)
-        meanMCC_df.to_csv(self.expdir / 'meanMCC_results.csv', index=False)
+        meanMCC_df.to_csv(self.expdir / 'meanMCC_results.csv')
 
         # generate z-score and p-value stats
         max_stats = compute_stats(maxMCC_df, ensemble_type='max')
-        max_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv', index=False)
+        max_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv')
         mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
-        mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv', index=False)
+        mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv')
 
 
 def compute_stats(results_df, ensemble_type='max'):
@@ -134,15 +126,32 @@ def cleanup(expdir, keep_matrix=False):
         (expdir / 'design_matrix.csv.bz2').unlink()
 
 
-def run_ea_ml(exp_dir, data_fn, sample_fn, gene_list, n_jobs=1, seed=111, kfolds=10, keep_matrix=False):
+def _load_reference(reference):
+    if reference == 'hg19':
+        reference_fn = resource_filename('ea_ml', 'data/hg19-refGene.protein-coding.txt')
+    elif reference == 'hg38':
+        reference_fn = resource_filename('ea_ml', 'data/hg38-refGene.protein-coding.txt')
+    else:
+        reference_fn = reference
+    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='name2')
+    return reference_df
+
+
+def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
     start = time.time()
-    # either load existing design matrix or compute new one from VCF
+
+    # load input data
     exp_dir = exp_dir.expanduser().resolve()
     data_fn = data_fn.expanduser().resolve()
-    pipeline = Pipeline(exp_dir, data_fn, sample_fn, gene_list, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
+    sample_df = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int})
+    reference_df = _load_reference(reference)
+
+    # initialize pipeline
+    pipeline = Pipeline(exp_dir, data_fn, sample_df, reference_df, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
+    # either compute design matrix from VCF or load existing one
     if '.vcf' in data_fn:
         pipeline.compute_matrix()
     else:
@@ -151,6 +160,7 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, gene_list, n_jobs=1, seed=111, kfolds
 
     print('Running experiment...')
     pipeline.run_weka_exp()
+    print('Scoring results...')
     pipeline.summarize_experiment()
     pipeline.write_results()
     print('Gene scoring completed. Analysis summary in experiment directory.')

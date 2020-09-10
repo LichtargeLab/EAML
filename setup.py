@@ -4,21 +4,21 @@ import setuptools
 
 from ea_ml import __project__, __version__, CLI, DESCRIPTION
 
-if os.path.exists('README.md'):
-    README = open('README.md').read()
-else:
-    README = ""
+README = open('README.md').read()
 CHANGES = open('CHANGELOG.md').read()
 
 setuptools.setup(
     name=__project__,
     version=__version__,
     description=DESCRIPTION,
+    long_description=f'{README}\n{CHANGES}',
     author='Dillon Shapiro',
     author_email='drshapir@bcm.edu',
+    url='https://github.com/LichtargeLab/pyEA-ML',
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    zip_safe=False,
     entry_points={'console_scripts': [f'{CLI} = ea_ml.cli:main']},
-    long_description=f'{README}\n{CHANGES}',
     install_requires=[
         'javabridge>=1.0.18',
         'joblib>=0.16.0',
@@ -32,6 +32,5 @@ setuptools.setup(
         'seaborn>=0.9.0',
         'statsmodels>=0.10.1',
         'tqdm>=4.48.2'
-    ],
-    include_package_data=True
+    ]
 )
