@@ -53,7 +53,6 @@ class Pipeline(object):
     def compute_matrix(self):
         """Computes the full design matrix from an input VCF"""
         self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs)
-        self.matrix.to_csv('design_matrix.csv.bz2')
 
     def load_matrix(self):
         """Load precomputed matrix with multi-indexed columns"""
@@ -108,6 +107,12 @@ class Pipeline(object):
         mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
         mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv')
 
+    def cleanup(self, keep_matrix=False):
+        """Deletes intermediate worker files and tmp directory."""
+        shutil.rmtree(self.expdir / 'tmp/')
+        if keep_matrix:
+            self.matrix.to_csv(self.expdir / 'design_matrix.csv.gz')
+
 
 def compute_stats(results_df, ensemble_type='max'):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
@@ -117,13 +122,6 @@ def compute_stats(results_df, ensemble_type='max'):
     nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
     nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
     return nonzero
-
-
-def cleanup(expdir, keep_matrix=False):
-    """Deletes intermediate worker files and temp directory."""
-    shutil.rmtree(expdir / 'tmp/')
-    if not keep_matrix:
-        (expdir / 'design_matrix.csv.bz2').unlink()
 
 
 def _load_reference(reference):
@@ -165,7 +163,7 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     pipeline.write_results()
     print('Gene scoring completed. Analysis summary in experiment directory.')
 
-    cleanup(exp_dir, keep_matrix=keep_matrix)
+    pipeline.cleanup(keep_matrix=keep_matrix)
     end = time.time()
     elapsed = str(datetime.timedelta(seconds=end - start))
     print(f'Time elapsed: {elapsed}')
