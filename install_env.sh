@@ -26,7 +26,7 @@ fi
 source $HOME/.bashrc
 
 # Set-up the Environment
-ENV_NAME='test'
+ENV_NAME='pyEA-ML'
 
 ENVS=$(conda env list | awk '{print $1}' )
 if [[ ${ENVS} != *${ENV_NAME}* ]]; then
