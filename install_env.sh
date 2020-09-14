@@ -31,7 +31,7 @@ ENV_NAME='pyEA-ML'
 ENVS=$(conda env list | awk '{print $1}' )
 if [[ ${ENVS} != *${ENV_NAME}* ]]; then
    # make virtual environment
-    conda create -n ${ENV_NAME} -c bioconda python=3.7 java-jdk=8.0.92
+    conda create -n ${ENV_NAME} -c bioconda python=3.7 java-jdk=8.0.112
     source activate ${ENV_NAME}
     export JAVA_HOME=${CONDA_PREFIX}/jre
     conda env update -f ${repSource}/environment.yml -n ${ENV_NAME}
