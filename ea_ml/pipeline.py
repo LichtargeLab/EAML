@@ -146,13 +146,13 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     # load input data
     exp_dir = exp_dir.expanduser().resolve()
     data_fn = data_fn.expanduser().resolve()
-    sample_df = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int})
+    samples = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}, index_col=0, squeeze=True)
     reference_df = _load_reference(reference)
 
     # initialize pipeline
-    pipeline = Pipeline(exp_dir, data_fn, sample_df, reference_df, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
+    pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
     # either compute design matrix from VCF or load existing one
-    if '.vcf' in data_fn:
+    if '.vcf' in str(data_fn):
         pipeline.compute_matrix()
     else:
         pipeline.load_matrix()

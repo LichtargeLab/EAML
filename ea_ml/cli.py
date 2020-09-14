@@ -71,7 +71,7 @@ def _get_command(function, namespace):
 
     if namespace.command == 'run':
         function = run_ea_ml
-        args += [namespace.data, namespace.samples, namespace.gene_list]
+        args += [namespace.data, namespace.samples]
         kwargs.update(reference=namespace.reference, n_jobs=namespace.threads, seed=namespace.seed,
                       kfolds=namespace.kfolds, keep_matrix=namespace.keep_matrix)
     elif namespace.command == 'permute':

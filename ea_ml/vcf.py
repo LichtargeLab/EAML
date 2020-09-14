@@ -6,6 +6,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from pysam import VariantFile
 from tqdm import tqdm
 
 
@@ -27,7 +28,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples):
         contig = gene_reference['chrom'].strip('chr')
     cds_start = gene_reference['cdsStart'].min()
     cds_end = gene_reference['cdsEnd'].max()
-    gene_df = pd.DataFrame(np.ones(len(samples), 6), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
+    gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
     for anno_gene, ea, sample_info in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
         if gene != anno_gene or np.isnan(ea).all():
