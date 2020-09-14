@@ -37,7 +37,7 @@ ea-ml --help
 Before running the main pipeline, be sure that the `JAVA_HOME` variable is set:
 ```bash
 conda activate pyEA-ML
-export JAVA_HOME=${CONDA_PREFIX}/jre
+export JAVA_HOME=${CONDA_PREFIX}
 ```
 
 EA-ML can then be run by calling `ea-ml` and one of its commands:
