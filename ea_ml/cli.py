@@ -28,6 +28,7 @@ def main(args=None, function=None):
     sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
     sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
+    sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
     sub.add_argument('--keep-matrix', action='store_true', help='keep design matrix after analysis')
 
     # Permutation experiment parser
@@ -41,6 +42,7 @@ def main(args=None, function=None):
     sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
     sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
+    sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
     sub.add_argument('-n', '--n_runs', type=int, default=100,
                      help='Number of permutations to include in distribution')
     sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
@@ -73,13 +75,13 @@ def _get_command(function, namespace):
         function = run_ea_ml
         args += [namespace.data, namespace.samples]
         kwargs.update(reference=namespace.reference, n_jobs=namespace.threads, seed=namespace.seed,
-                      kfolds=namespace.kfolds, keep_matrix=namespace.keep_matrix)
+                      kfolds=namespace.kfolds, keep_matrix=namespace.keep_matrix, X_chrom=namespace.X_chromosome)
     elif namespace.command == 'permute':
         function = run_permutations
         args += [namespace.data, namespace.samples, namespace.predictions]
         kwargs.update(reference=namespace.reference, n_jobs=namespace.threads, seed=namespace.seed,
                       kfolds=namespace.kfolds, n_runs=namespace.n_runs, restart=namespace.restart,
-                      clean=namespace.clean)
+                      clean=namespace.clean, X_chrom=namespace.X_chromosome)
     elif namespace.command == 'visualize':
         function = visualize
         output = namespace.output

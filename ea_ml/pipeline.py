@@ -124,7 +124,7 @@ def compute_stats(results_df, ensemble_type='max'):
     return nonzero
 
 
-def _load_reference(reference):
+def _load_reference(reference, X_chrom=False):
     if reference == 'hg19':
         reference_fn = resource_filename('ea_ml', 'data/hg19-refGene.protein-coding.txt')
     elif reference == 'hg38':
@@ -132,10 +132,13 @@ def _load_reference(reference):
     else:
         reference_fn = reference
     reference_df = pd.read_csv(reference_fn, sep='\t', index_col='name2')
+    if X_chrom is False:
+        reference_df = reference_df[reference_df.chrom != 'chrX']
     return reference_df
 
 
-def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False):
+def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False,
+              X_chrom=False):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
@@ -145,7 +148,7 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     exp_dir = exp_dir.expanduser().resolve()
     data_fn = data_fn.expanduser().resolve()
     samples = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}, index_col=0, squeeze=True)
-    reference_df = _load_reference(reference)
+    reference_df = _load_reference(reference, X_chrom=X_chrom)
 
     # initialize pipeline
     pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
