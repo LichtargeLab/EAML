@@ -147,7 +147,7 @@ def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_sp
     (expdir / 'tmp').mkdir(exist_ok=True)
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
-    gene_splits = np.array_split(list(design_matrix.columns.get_level_values(0)), n_workers)
+    gene_splits = np.array_split(list(design_matrix.columns.get_level_values(0).unique()), n_workers)
     if n_splits != -1:
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
         kf_splits = list(kf.split(design_matrix, targets))
