@@ -16,16 +16,16 @@ def permute_labels(samples_fn, run_dir):
     Permutes the case/control labels and writes out the new sample list.
 
     Args:
-        samples_fn (str): Path to the original sample,label list
+        samples_fn (str): Path to the original sample,target list
         run_dir (Path): Path to the specific permutation directory
 
     Returns:
         perm_labels_path (str): Path to the output permuted sample list
     """
-    df = pd.read_csv(samples_fn, header=None)
-    df[1] = np.random.permutation(df[1])
+    targets = pd.read_csv(samples_fn, header=None, dtypes={0: str, 1: int}, index_col=0, squeeze=True)
+    permuted_targets = pd.Series(np.random.permutation(targets), index=targets.index)
     perm_labels_path = run_dir / 'label_permutation.csv'
-    df.to_csv(perm_labels_path, header=False, index=False)
+    permuted_targets.to_csv(perm_labels_path, header=False, index=False)
     return perm_labels_path
 
 
@@ -66,7 +66,7 @@ def compute_zscores(preds_fn, perm_results, ensemble_type='max'):
     return rand_results
 
 
-def run_permutations(exp_dir, data, samples_fn, preds_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, n_runs=100,
+def run_permutations(exp_dir, data_fn, samples_fn, preds_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, n_runs=100,
                      restart=0, clean=False, X_chrom=False):
     if restart > 0:  # restart permutation count from here
         start = restart
@@ -76,11 +76,11 @@ def run_permutations(exp_dir, data, samples_fn, preds_fn, reference='hg19', n_jo
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
         new_labels = permute_labels(samples_fn, run_dir)
-        run_ea_ml(run_dir, data, new_labels, reference=reference, n_jobs=n_jobs, seed=seed, kfolds=kfolds,
+        run_ea_ml(run_dir, data_fn, new_labels, reference=reference, n_jobs=n_jobs, seed=seed, kfolds=kfolds,
                   keep_matrix=True, X_chrom=X_chrom)
-        if '.vcf' in str(data):
-            data = exp_dir / 'design_matrix.csv.bz2'
-            shutil.move(str(data), str(exp_dir))
+        if '.vcf' in str(data_fn):
+            data_fn = exp_dir / 'design_matrix.csv.gz'
+            shutil.move(str(data_fn), str(exp_dir))
     # aggregate background distributions
     perm_dist_max = merge_runs(exp_dir, n_runs, ensemble_type='max')
     perm_dist_max.to_csv(exp_dir / 'random_distributions.maxMCC.csv')
@@ -92,7 +92,7 @@ def run_permutations(exp_dir, data, samples_fn, preds_fn, reference='hg19', n_jo
     perm_stats_mean = compute_zscores(preds_fn, perm_dist_mean)
     perm_stats_mean.to_csv(exp_dir / 'permutation_results.meanMCC.csv')
     if clean:
-        data.unlink()
+        data_fn.unlink()
         for i in range(1, n_runs + 1):
             shutil.rmtree(str(exp_dir / f'run{i}'), ignore_errors=True)
     else:
