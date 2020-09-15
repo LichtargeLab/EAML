@@ -41,14 +41,8 @@ def _init_worker(expdir, targets, clf_info, n_splits, kf_splits, seed=111):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def _weka_worker(gene_split):
-    """
-    Worker process for Weka experiments
-
-    Args:
-        gene_split (ndarray): The split of genes to test through.
-    """
-    wrk_idx, (genes, X) = gene_split
+def _weka_worker(args):
+    wrk_idx, (genes, X) = args
     jvm.start(bundled=False)
     n_genes = len(genes)
     n_done = 0
@@ -92,8 +86,8 @@ def _weka_worker(gene_split):
     jvm.stop()
 
 
-def _loo_worker(gene_split):
-    wrk_idx, (genes, X) = gene_split
+def _loo_worker(args):
+    wrk_idx, (genes, X) = args
     jvm.start(bundled=False)
     n_genes = len(genes)
     n_done = 0
@@ -153,7 +147,7 @@ def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_sp
     (expdir / 'tmp').mkdir(exist_ok=True)
     jvm.add_bundled_jars()
     # split genes into chunks by number of workers
-    gene_splits = np.array_split(list(targets.index), n_workers)
+    gene_splits = np.array_split(list(design_matrix.columns.get_levels(0)), n_workers)
     if n_splits != -1:
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
         kf_splits = list(kf.split(design_matrix, targets))
