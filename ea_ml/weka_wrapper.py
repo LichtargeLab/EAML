@@ -53,8 +53,8 @@ def _weka_worker(args):
             # write intermediate train and test arffs
             train_fn = exp_dir / 'tmp' / f'{gene}_{i}-train.arff'
             test_fn = exp_dir / 'tmp' / f'{gene}_{i}-test.arff'
-            write_arff(gene_X.iloc[train], y.iloc[train], gene, train_fn, row_idxs=train)
-            write_arff(gene_X.iloc[test], y.iloc[test], gene, test_fn, row_idxs=test)
+            write_arff(gene_X.iloc[train], y.iloc[train], train_fn)
+            write_arff(gene_X.iloc[test], y.iloc[test], test_fn)
 
             # load train and test arffs
             loader = Loader(classname='weka.core.converters.ArffLoader')
@@ -93,8 +93,9 @@ def _loo_worker(args):
     n_done = 0
     for gene in genes:
         result_d = {}
+        gene_X = X[gene]
         gene_arff_fn = exp_dir / 'tmp' / f'{gene}.arff'
-        write_arff(X, y, gene, gene_arff_fn)
+        write_arff(gene_X, y, gene_arff_fn)
         loader = Loader(classname='weka.core.converters.ArffLoader')
         arff = loader.load_file(f'{str(exp_dir)}/tmp/{gene}.arff')
         arff.class_is_last()
@@ -175,16 +176,14 @@ def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_sp
         sys.exit(1)
 
 
-def write_arff(design_matrix, targets, gene, f_out, row_idxs=None):
+def write_arff(design_matrix, targets, f_out):
     """
         Outputs an .arff file corresponding to the DataFrame
 
         Args:
-            design_matrix (DataFrame): design matrix from VCF
+            design_matrix (DataFrame): design matrix for a single gene
             targets (Series): disease labels
-            gene (str): gene to subset from matrix
             f_out (Path): filepath for the output
-            row_idxs (list-like): specifies specific samples to write to output
         """
     def _write_rows(examples):
         for example, label in examples:
@@ -192,16 +191,12 @@ def write_arff(design_matrix, targets, gene, f_out, row_idxs=None):
             example.append(str(label))
             f.write(','.join(example) + '\n')
 
-    gene_X = design_matrix[gene]
     with open(f_out, 'w') as f:
         relation = f_out.stem
         f.write(f'@relation {relation}\n')
-        for ft in gene_X.columns:
+        for ft in design_matrix.columns:
             f.write(f'@attribute {ft} REAL\n')
         f.write('@attribute class {0,1}\n')
         f.write('@data\n')
-        if row_idxs:
-            rows = zip(gene_X.iloc[row_idxs].values, targets.iloc[row_idxs].values)
-        else:
-            rows = zip(gene_X.values, targets.values)
+        rows = zip(design_matrix.sort_index().values, targets.sort_index().values)
         _write_rows(rows)
