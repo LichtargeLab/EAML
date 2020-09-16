@@ -31,7 +31,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples):
     gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
     for anno_gene, ea, sample_info in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
-        if gene != anno_gene or np.isnan(ea).all():
+        if not ea or gene != anno_gene:
             continue
         gts = pd.Series([convert_zygo(sample_info[sample]['GT']) for sample in samples], index=samples)
         for i, ft_name in enumerate(feature_names):
@@ -96,7 +96,7 @@ def refactor_EA(EA):
         EA (list/tuple): The EA scores parsed from a variant
 
     Returns:
-        tuple: The new list of scores, refactored as float or NaN
+        list: The new list of scores, refactored as float or NaN
 
     Note: EA must be string type, otherwise regex search will raise an error.
     """
@@ -108,9 +108,9 @@ def refactor_EA(EA):
             if re.search(r'fs-indel', score) or re.search(r'STOP', score):
                 score = 100
             else:
-                score = np.nan
+                continue
         newEA.append(score)
-    return np.array(newEA)
+    return newEA
 
 
 def convert_zygo(genotype):
