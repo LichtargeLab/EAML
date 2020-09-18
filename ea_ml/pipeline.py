@@ -66,20 +66,20 @@ class Pipeline(object):
     def summarize_experiment(self):
         """Combines results from Weka experiment files"""
         worker_files = (self.expdir / 'tmp').glob('worker-*.results.csv')
-        dfs = [pd.read_csv(fn, header=None) for fn in worker_files]
-        result_df = pd.concat(dfs, ignore_index=True)
+        dfs = [pd.read_csv(fn, header=None, index_col=[0, 1]) for fn in worker_files]
+        result_df = pd.concat(dfs).sort_index()
+        result_df.index.rename(['gene', 'classifier'], inplace=True)
         if self.kfolds == -1:
-            result_df.columns = ['gene', 'classifier', 'TP', 'TN', 'FP', 'FN', 'MCC']
+            result_df.columns = ['TP', 'TN', 'FP', 'FN', 'MCC']
         else:
-            result_df.columns = ['gene', 'classifier'] + [str(i) for i in range(self.kfolds)]
+            result_df.columns = [str(i) for i in range(self.kfolds)]
             result_df['meanMCC'] = result_df.mean(axis=1)
         result_df.sort_values(['gene', 'classifier'], inplace=True)
-        result_df.set_index(['gene', 'classifier'], inplace=True)
-        result_df.to_csv(self.expdir / 'gene_MCC_summary.csv')
+        result_df.to_csv(self.expdir / 'full-worker-results.csv')
         self.full_result_df = result_df
 
     def write_results(self):
-        cv_df = pd.DataFrame(index=self.reference.index)
+        cv_df = pd.DataFrame(index=self.reference.index.unique())
 
         # write summary file for each classifier and aggregate mean MCCs
         for clf in self.clf_info['classifier']:
@@ -90,28 +90,28 @@ class Pipeline(object):
                 cv_df[clf] = clf_df['MCC']
             else:
                 cv_df[clf] = clf_df['meanMCC']
-        cv_df.to_csv(self.expdir / 'all-classifier_means.csv', index=False)
+        cv_df.to_csv(self.expdir / 'gene-MCC-summary.csv')
 
         # fetch max and mean MCC for each gene and write final rankings files
         maxMCC_df = cv_df.max(axis=1).sort_values(ascending=False).to_frame(name='maxMCC')
-        maxMCC_df.to_csv(self.expdir / 'maxMCC_results.csv')
+        maxMCC_df.to_csv(self.expdir / 'maxMCC-results.csv')
 
         meanMCC_df = pd.concat([cv_df.mean(axis=1), cv_df.std(axis=1)], axis=1)
         meanMCC_df.columns = ['meanMCC', 'std']
         meanMCC_df.sort_values('meanMCC', ascending=False, inplace=True)
-        meanMCC_df.to_csv(self.expdir / 'meanMCC_results.csv')
+        meanMCC_df.to_csv(self.expdir / 'meanMCC-results.csv')
 
         # generate z-score and p-value stats
         max_stats = compute_stats(maxMCC_df, ensemble_type='max')
-        max_stats.to_csv(self.expdir / 'maxMCC_results.nonzero-stats.csv')
+        max_stats.to_csv(self.expdir / 'maxMCC-results.nonzero-stats.csv')
         mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
-        mean_stats.to_csv(self.expdir / 'meanMCC_results.nonzero-stats.csv')
+        mean_stats.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def cleanup(self, keep_matrix=False):
         """Deletes intermediate worker files and tmp directory."""
         shutil.rmtree(self.expdir / 'tmp/')
         if keep_matrix:
-            self.matrix.to_csv(self.expdir / 'design_matrix.csv.gz')
+            self.matrix.to_csv(self.expdir / 'design-matrix.csv.gz')
 
 
 def compute_stats(results_df, ensemble_type='max'):
