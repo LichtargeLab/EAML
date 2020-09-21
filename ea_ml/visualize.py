@@ -58,11 +58,11 @@ def visualize(exp_dir, out_dir, prefix='', dpi=150):
         prefix = prefix + '.'
 
     for col in ('maxMCC', 'meanMCC'):
-        results = pd.read_csv(exp_dir / f'{col}_results.csv').sort_values(col, ascending=False)
+        results = pd.read_csv(exp_dir / f'{col}-results.csv').sort_values(col, ascending=False)
         mcc_scatter(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.png')
         mcc_hist(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.png')
 
-        stat_results = pd.read_csv(exp_dir / f'{col}_results.nonzero-stats.csv').sort_values(col, ascending=False)
+        stat_results = pd.read_csv(exp_dir / f'{col}-results.nonzero-stats.csv').sort_values(col, ascending=False)
         mcc_scatter(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.nonzero.png')
         mcc_hist(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.nonzero.png')
         mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}{col}.logMCC-scatter.nonzero.png')

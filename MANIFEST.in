@@ -1,3 +1,2 @@
 include CHANGELOG.md
-include environment.yml
-include ea_ml/classifiers.csv
+include ea_ml/data/*
