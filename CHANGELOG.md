@@ -1,3 +1,11 @@
+# 0.8.0 (2020-09-21)
+
+- Replaced DesignMatrix framework with multi-indexed Pandas DataFrame for containing all genes' features
+- Replaced test gene list requirement with standardized reference lists from RefGene
+- Added multiprocessing (using joblib) to VCF parsing
+- Updated package requirements
+- Switched from Oracle JDK to OpenJDK for Java requirement
+
 # 0.7.4 (2020-08-03)
 
 - Added visualizations for meanMCC rankings
