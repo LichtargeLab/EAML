@@ -147,7 +147,7 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     # load input data
     exp_dir = exp_dir.expanduser().resolve()
     data_fn = data_fn.expanduser().resolve()
-    samples = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}, index_col=0, squeeze=True)
+    samples = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}).set_index(0).squeeze()
     reference_df = _load_reference(reference, X_chrom=X_chrom)
 
     # initialize pipeline
