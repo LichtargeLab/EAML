@@ -52,6 +52,7 @@ def main(args=None, function=None):
     info = 'visualize results of EA-ML analysis'
     sub = subs.add_parser('visualize', help=info)
     sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
+    sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
     sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
     sub.add_argument('-o', '--output', type=Path, help='location to output figures')
     sub.add_argument('-p', '--prefix', default='', help='prefix for output files')
@@ -86,7 +87,7 @@ def _get_command(function, namespace):
         function = visualize
         output = namespace.output
         args.append(output) if output else args.append(namespace.experiment_dir)
-        kwargs.update(dpi=namespace.dpi, prefix=namespace.prefix)
+        kwargs.update(dpi=namespace.dpi, prefix=namespace.prefix, reference=namespace.reference)
 
     return function, args, kwargs
 

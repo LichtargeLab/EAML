@@ -80,6 +80,7 @@ class Pipeline(object):
 
     def write_results(self):
         cv_df = pd.DataFrame(index=self.reference.index.unique())
+        cv_df.index.rename('gene', inplace=True)
 
         # write summary file for each classifier and aggregate mean MCCs
         for clf in self.clf_info['classifier']:
