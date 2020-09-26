@@ -92,7 +92,7 @@ Optional arguments:
 | -k, --kfolds       | \<int\>   | number of cross-validation folds                  |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis                 |
 | -n, --n_runs       | \<int\>   | number of permutations to include in distribution |
-| -r, --restart      | \<int\>   | restart permutations from this number             |
+| --restart          | \<int\>   | restart permutations from this number             |
 | -c, --clean        | \<bool\>  | clean design matrix and permutation files         |
 
 ### Visualize experimental results
@@ -105,11 +105,12 @@ Required arguments:
 
 Optional arguments:
 
-| argument       | type          | description                    |
-|----------------|---------------|--------------------------------|
-| --dpi          | \<int\>       | DPI for output figures         |
-| -o, --output   | \<directory\> | location to output figures     |
-| -p, --prefix   | \<str\>       | prefix for output file names   |
+| argument        | type          | description                    |
+|-----------------|---------------|--------------------------------|
+| --dpi           | \<int\>       | DPI for output figures         |
+| -o, --output    | \<directory\> | location to output figures     |
+| -p, --prefix    | \<str\>       | prefix for output file names   |
+| -r, --reference | \<str\>       | genome reference (hg19, hg38)  |
 
 ## Input Requirements
 

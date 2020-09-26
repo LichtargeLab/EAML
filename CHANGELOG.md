@@ -1,3 +1,7 @@
+# 0.8.1 (2020-09-26)
+
+- Added Manhattan plot to standard visualizations
+
 # 0.8.0 (2020-09-21)
 
 - Replaced DesignMatrix framework with multi-indexed Pandas DataFrame for containing all genes' features
