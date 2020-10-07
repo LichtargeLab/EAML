@@ -100,7 +100,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
         for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index:
             _label_point(gene)
     else:
-        for gene in mcc_df.nsmallest(30, 'pvalue'):
+        for gene in mcc_df.nsmallest(30, 'pvalue').index:
             _label_point(gene)
     ax.axhline(-np.log10(fdr_cutoff), ls='--', color='black')
     ax.set_xlabel('Chromosome', fontsize=16)

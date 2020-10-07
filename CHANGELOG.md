@@ -1,3 +1,7 @@
+# 0.8.2 (2020-10-07)
+
+- Small fix to Manhattan plotting
+
 # 0.8.1 (2020-09-26)
 
 - Added Manhattan plot to standard visualizations
