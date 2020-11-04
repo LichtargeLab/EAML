@@ -10,7 +10,7 @@ from .pipeline import _load_reference
 sns.set(context='talk', style='ticks')
 
 
-def mcc_scatter(results, column='maxMCC', dpi=150):
+def mcc_scatter(results, column='meanMCC', dpi=150):
     """
     Scatter plot of maxMCC results.
 
@@ -33,7 +33,7 @@ def mcc_scatter(results, column='maxMCC', dpi=150):
     return fig
 
 
-def mcc_hist(results, column='maxMCC', dpi=150):
+def mcc_hist(results, column='meanMCC', dpi=150):
     """
     Histogram of maxMCC results.
 
@@ -120,14 +120,13 @@ def visualize(exp_dir, out_dir, prefix='', dpi=150, reference='hg19'):
     if prefix:
         prefix = prefix + '.'
 
-    for col in ('maxMCC', 'meanMCC'):
-        results = pd.read_csv(exp_dir / f'{col}-results.csv', index_col=0).sort_values(col, ascending=False)
-        mcc_scatter(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.png')
-        mcc_hist(results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.png')
+    results = pd.read_csv(exp_dir / 'meanMCC-results.csv', index_col=0).sort_values('meanMCC', ascending=False)
+    mcc_scatter(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.png')
+    mcc_hist(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.png')
 
-        stat_results = pd.read_csv(exp_dir / f'{col}-results.nonzero-stats.csv', index_col=0).sort_values(col, ascending=False)
-        mcc_scatter(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-scatter.nonzero.png')
-        mcc_hist(stat_results, column=col, dpi=dpi).savefig(out_dir / f'{prefix}{col}-hist.nonzero.png')
-        mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}{col}.logMCC-scatter.nonzero.png')
-        mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}{col}.logMCC-hist.nonzero.png')
-        manhattan_plot(stat_results, reference_df, dpi=dpi).savefig(out_dir / f'{prefix}{col}-manhattan.svg')
+    stat_results = pd.read_csv(exp_dir / 'meanMCC-results.nonzero-stats.csv', index_col=0).sort_values('meanMCC', ascending=False)
+    mcc_scatter(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.nonzero.png')
+    mcc_hist(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.nonzero.png')
+    mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-scatter.nonzero.png')
+    mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-hist.nonzero.png')
+    manhattan_plot(stat_results, reference_df, dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-manhattan.svg')

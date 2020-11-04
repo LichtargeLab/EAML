@@ -93,18 +93,13 @@ class Pipeline(object):
                 cv_df[clf] = clf_df['meanMCC']
         cv_df.to_csv(self.expdir / 'gene-MCC-summary.csv')
 
-        # fetch max and mean MCC for each gene and write final rankings files
-        maxMCC_df = cv_df.max(axis=1).sort_values(ascending=False).to_frame(name='maxMCC')
-        maxMCC_df.to_csv(self.expdir / 'maxMCC-results.csv')
-
+        # fetch mean MCC for each gene and write final rankings files
         meanMCC_df = pd.concat([cv_df.mean(axis=1), cv_df.std(axis=1)], axis=1)
         meanMCC_df.columns = ['meanMCC', 'std']
         meanMCC_df.sort_values('meanMCC', ascending=False, inplace=True)
         meanMCC_df.to_csv(self.expdir / 'meanMCC-results.csv')
 
         # generate z-score and p-value stats
-        max_stats = compute_stats(maxMCC_df, ensemble_type='max')
-        max_stats.to_csv(self.expdir / 'maxMCC-results.nonzero-stats.csv')
         mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
         mean_stats.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
@@ -115,7 +110,7 @@ class Pipeline(object):
             self.matrix.to_csv(self.expdir / 'design-matrix.csv.gz')
 
 
-def compute_stats(results_df, ensemble_type='max'):
+def compute_stats(results_df, ensemble_type='mean'):
     """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
     nonzero = results_df.loc[results_df[f'{ensemble_type}MCC'] != 0].copy()
     nonzero['logMCC'] = np.log(nonzero[f'{ensemble_type}MCC'] + 1 - np.min(nonzero[f'{ensemble_type}MCC']))

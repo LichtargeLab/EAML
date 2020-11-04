@@ -1,3 +1,10 @@
+# 0.9.0 (2020-11-04)
+
+- In order to standardize the results presented from any given experiment (and reduce confusion), we are removing the
+  automatic summarizing of max scores for each gene. This lines up with results from AD work, where genes were ranked
+  by mean MCC, and makes more sense when considering ensembling principles.
+- If you want to still analyze the max MCC scores, you can do it manually using the API.
+
 # 0.8.2 (2020-10-07)
 
 - Small fix to Manhattan plotting
