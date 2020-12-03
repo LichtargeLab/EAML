@@ -14,7 +14,7 @@ from weka.core.classes import Random
 
 
 # noinspection PyGlobalUndefined
-def _init_worker(expdir, targets, clf_info, n_splits, kf_splits, seed=111):
+def _init_worker(expdir, targets, clf_info, n_splits, kf_splits):
     """
     Initializes each worker process. This makes some information available as shared memory.
 
@@ -24,7 +24,6 @@ def _init_worker(expdir, targets, clf_info, n_splits, kf_splits, seed=111):
         clf_info (DataFrame): DataFrame of Weka classifiers, their Weka object names, and hyperparameters
         n_splits (int): Number of splits used for cross-validation
         kf_splits (list): List of tuples containing train/test indices for each fold
-        seed (int): The random seed used for sampling
     """
     global exp_dir
     exp_dir = expdir
@@ -36,8 +35,6 @@ def _init_worker(expdir, targets, clf_info, n_splits, kf_splits, seed=111):
     n_folds = n_splits
     global k_splits
     k_splits = kf_splits
-    global rseed
-    rseed = seed
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
@@ -104,7 +101,7 @@ def _loo_worker(args):
             _, clf, clf_str, opts = row
             clf_obj = Classifier(classname=clf_str, options=opts)
             evl = Evaluation(arff)
-            evl.crossvalidate_model(clf_obj, arff, len(arff), Random(rseed))
+            evl.crossvalidate_model(clf_obj, arff, len(arff), Random(0))
             mcc = evl.matthews_correlation_coefficient(1)
             if np.isnan(mcc):
                 mcc = 0
@@ -131,7 +128,7 @@ def _append_results(worker_file, gene, gene_results):
             f.write(f'{row}\n')
 
 
-def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_splits=10):
+def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=None, n_splits=10):
     """
     The overall Weka experiment. The steps include loading the K .arff files for each gene, building a new classifier
     based on the training set, then evaluating the model on the test set and outputting the MCC to a dictionary.
@@ -160,7 +157,7 @@ def run_weka(expdir, design_matrix, targets, n_workers, clf_info, seed=111, n_sp
     worker_args = enumerate(list(zip(gene_splits, matrix_splits)))
 
     # these are set as globals in the worker initializer
-    global_args = [expdir, targets, clf_info, n_splits, kf_splits, seed]
+    global_args = [expdir, targets, clf_info, n_splits, kf_splits]
     pool = Pool(n_workers, initializer=_init_worker, initargs=global_args, maxtasksperchild=1)
     try:
         if n_splits == -1:

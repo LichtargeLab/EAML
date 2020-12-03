@@ -26,7 +26,7 @@ def main(args=None, function=None):
     sub.add_argument('samples', help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
     sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
     sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
-    sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
+    sub.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
     sub.add_argument('--keep-matrix', action='store_true', help='keep design matrix after analysis')
@@ -40,7 +40,7 @@ def main(args=None, function=None):
     sub.add_argument('predictions', help='Path to real experiment results')
     sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
     sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
-    sub.add_argument('-s', '--seed', type=int, default=111, help='random seed for generating KFold samples')
+    sub.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
     sub.add_argument('-n', '--n_runs', type=int, default=100,

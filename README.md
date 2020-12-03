@@ -64,7 +64,7 @@ Optional arguments:
 |--------------------|-----------|------------------------------------------------|
 | -r, --reference    | \<str\>   | genome reference (hg19, hg38)                  |
 | -t, --threads      | \<int\>   | experiment directory                           |
-| -s, --seed         | \<int\>   | VCF or .npz matrix                             |
+| -s, --seed         | \<int\>   | random seed for cross-validation               |
 | -k, --kfolds       | \<int\>   | number of cross-validation folds               |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis              |
 | --keep-matrix      | \<bool\>  | keeps design matrix after analysis completes   |
@@ -78,7 +78,7 @@ Required arguments:
 | argument       | type          | description                                       |
 |----------------|---------------|---------------------------------------------------|
 | experiment_dir | \<directory\> | experiment directory                              |
-| data           | \<file\>      | VCF or .npz matrix                                |
+| data           | \<file\>      | VCF or multi-indexed Pandas DataFrame in CSV      |
 | samples        | \<file\>      | two-column CSV with sample IDs and disease status |
 | predictions    | \<file\>      | EA-ML results                                     |
 
@@ -88,7 +88,7 @@ Optional arguments:
 |--------------------|-----------|---------------------------------------------------|
 | -r, --reference    | \<str\>   | genome reference (hg19, hg38)                     |
 | -t, --threads      | \<int\>   | experiment directory                              |
-| -s, --seed         | \<int\>   | VCF or .npz matrix                                |
+| -s, --seed         | \<int\>   | random seed for cross-validation                  |
 | -k, --kfolds       | \<int\>   | number of cross-validation folds                  |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis                 |
 | -n, --n_runs       | \<int\>   | number of permutations to include in distribution |
