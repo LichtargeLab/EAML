@@ -67,7 +67,7 @@ def compute_zscores(preds_fn, perm_results, ensemble_type='max'):
 
 
 def run_permutations(exp_dir, data_fn, samples_fn, preds_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, n_runs=100,
-                     restart=0, clean=False, X_chrom=False):
+                     restart=0, clean=False, X_chrom=False, af_threshold=None):
     if restart > 0:  # restart permutation count from here
         start = restart
     else:  # the default, no restart
@@ -77,7 +77,7 @@ def run_permutations(exp_dir, data_fn, samples_fn, preds_fn, reference='hg19', n
         run_dir.mkdir()
         new_labels = permute_labels(samples_fn, run_dir)
         run_ea_ml(run_dir, data_fn, new_labels, reference=reference, n_jobs=n_jobs, seed=seed, kfolds=kfolds,
-                  keep_matrix=True, X_chrom=X_chrom)
+                  keep_matrix=True, X_chrom=X_chrom, af_threshold=af_threshold)
         if '.vcf' in str(data_fn):
             data_fn = exp_dir / 'design_matrix.csv.gz'
             shutil.move(str(data_fn), str(exp_dir))

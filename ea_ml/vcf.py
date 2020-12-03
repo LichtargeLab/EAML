@@ -10,14 +10,19 @@ from pysam import VariantFile
 from tqdm import tqdm
 
 
-def parse_vcf(vcf_fn, reference, samples, n_jobs=1):
-    features = Parallel(n_jobs=n_jobs)(delayed(parse_gene)(vcf_fn, gene, reference.loc[gene], samples)
+def parse_vcf(vcf_fn, reference, samples, n_jobs=1, af_threshold=None):
+    vcf = VariantFile(vcf_fn)
+    if af_threshold and 'AF' not in list(vcf.header.info):  # checks if allele frequency is annotated when filter is set
+        raise AttributeError('AF info field not defined in header.')
+
+    features = Parallel(n_jobs=n_jobs)(delayed(parse_gene)(vcf_fn, gene, reference.loc[gene], samples,
+                                                           af_threshold=af_threshold)
                                        for gene in tqdm(reference.index.unique()))
     design_matrix = pd.concat(dict(features), axis=1)
     return design_matrix
 
 
-def parse_gene(vcf_fn, gene, gene_reference, samples):
+def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None):
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
     vcf = VariantFile(vcf_fn)
@@ -30,8 +35,8 @@ def parse_gene(vcf_fn, gene, gene_reference, samples):
     cds_end = gene_reference['cdsEnd'].max()
     gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
-    for anno_gene, ea, sample_info in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
-        if not ea or gene != anno_gene:
+    for anno_gene, ea, sample_info, af in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
+        if not ea or gene != anno_gene or af > af_threshold:
             continue
         gts = pd.Series([convert_zygo(sample_info[sample]['GT']) for sample in samples], index=samples)
         for i, ft_name in enumerate(feature_names):
@@ -64,13 +69,15 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
                 yield var
         else:
             ea = refactor_EA(rec.info['EA'])
-            yield rec.info['gene'], ea, rec.samples
+            af = rec.info.get('AF')[0]
+            yield rec.info['gene'], ea, rec.samples, af
 
 
 def _split_genes(rec):
     ea_d = defaultdict(list)
     score = rec.info['EA']
     genes = rec.info['gene']
+    af = rec.info.get('AF')[0]
     geneset = set(genes)
     if len(score) == len(genes):
         for g, s in zip(genes, score):
@@ -85,7 +92,7 @@ def _split_genes(rec):
 
     for gene in geneset:
         ea = refactor_EA(ea_d[gene])
-        yield gene, ea, rec.samples
+        yield gene, ea, rec.samples, af
 
 
 def refactor_EA(EA):
