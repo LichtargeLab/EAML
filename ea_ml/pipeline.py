@@ -23,7 +23,6 @@ class Pipeline(object):
         n_jobs (int): number of parallel jobs
         expdir (Path): filepath to experiment folder
         data_fn (Path): filepath to data input file (either a VCF or multi-indexed DataFrame)
-        seed (int): Random seed for KFold sampling
         targets (Series): Array of target labels for training/prediction
         reference (DataFrame): reference background for genes
         matrix (DesignMatrix): Object for containing feature information for each gene and sample
@@ -34,13 +33,12 @@ class Pipeline(object):
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
 
-    def __init__(self, expdir, data_fn, sample_targets, reference, n_jobs=1, seed=111, kfolds=10):
+    def __init__(self, expdir, data_fn, sample_targets, reference, n_jobs=1, kfolds=10):
         self.n_jobs = n_jobs
         self.expdir = expdir
         self.data_fn = data_fn
         self.targets = sample_targets
         self.reference = reference
-        self.seed = seed
         self.kfolds = kfolds
 
         # load classifier information
@@ -50,17 +48,18 @@ class Pipeline(object):
         if self.kfolds == -1:
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
-    def compute_matrix(self):
+    def compute_matrix(self, af_threshold=None):
         """Computes the full design matrix from an input VCF"""
-        self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs)
+        self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs,
+                                    af_threshold=af_threshold)
 
     def load_matrix(self):
         """Load precomputed matrix with multi-indexed columns"""
         self.matrix = pd.read_csv(self.data_fn, header=[0, 1], index_col=0)
 
-    def run_weka_exp(self):
+    def run_weka_exp(self, seed=None):
         """Wraps call to weka_wrapper functions"""
-        run_weka(self.expdir, self.matrix, self.targets, self.n_jobs, self.clf_info, seed=self.seed,
+        run_weka(self.expdir, self.matrix, self.targets, self.n_jobs, self.clf_info, seed=seed,
                  n_splits=self.kfolds)
 
     def summarize_experiment(self):
@@ -134,7 +133,7 @@ def _load_reference(reference, X_chrom=False):
 
 
 def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False,
-              X_chrom=False):
+              X_chrom=False, af_threshold=None):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
@@ -147,16 +146,16 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     reference_df = _load_reference(reference, X_chrom=X_chrom)
 
     # initialize pipeline
-    pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, seed=seed, kfolds=kfolds)
+    pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, kfolds=kfolds)
     # either compute design matrix from VCF or load existing one
     if '.vcf' in str(data_fn):
-        pipeline.compute_matrix()
+        pipeline.compute_matrix(af_threshold=af_threshold)
     else:
         pipeline.load_matrix()
     print('Design matrix loaded.')
 
     print('Running experiment...')
-    pipeline.run_weka_exp()
+    pipeline.run_weka_exp(seed=seed)
     print('Scoring results...')
     pipeline.summarize_experiment()
     pipeline.write_results()

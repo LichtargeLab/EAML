@@ -1,3 +1,8 @@
+# 0.10.0 (2020-12-03)
+
+- Added an option to use an allele frequency threshold for variants. This requires the input VCF to contain an 'AF'
+  info field annotated by bcftools
+
 # 0.9.0 (2020-11-04)
 
 - In order to standardize the results presented from any given experiment (and reduce confusion), we are removing the
