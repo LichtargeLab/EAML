@@ -11,10 +11,6 @@ from tqdm import tqdm
 
 
 def parse_vcf(vcf_fn, reference, samples, n_jobs=1, af_threshold=None):
-    vcf = VariantFile(vcf_fn)
-    if af_threshold and 'AF' not in list(vcf.header.info):  # checks if allele frequency is annotated when filter is set
-        raise AttributeError('AF info field not defined in header.')
-
     features = Parallel(n_jobs=n_jobs)(delayed(parse_gene)(vcf_fn, gene, reference.loc[gene], samples,
                                                            af_threshold=af_threshold)
                                        for gene in tqdm(reference.index.unique()))
@@ -69,15 +65,23 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
                 yield var
         else:
             ea = refactor_EA(rec.info['EA'])
-            af = rec.info.get('AF')[0]
+            af = _get_af(rec)
             yield rec.info['gene'], ea, rec.samples, af
+
+
+def _get_af(rec):
+    try:  # if AF isn't annotated, compute using AC and AN fields
+        af = rec.info['AF'][0]
+    except KeyError:
+        af = rec.info['AC'] / rec.info['AN']
+    return af
 
 
 def _split_genes(rec):
     ea_d = defaultdict(list)
     score = rec.info['EA']
     genes = rec.info['gene']
-    af = rec.info.get('AF')[0]
+    af = _get_af(rec)
     geneset = set(genes)
     if len(score) == len(genes):
         for g, s in zip(genes, score):

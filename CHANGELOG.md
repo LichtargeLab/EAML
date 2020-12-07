@@ -1,3 +1,7 @@
+# 0.10.1 (2020-12-07)
+
+- Allele frequency is now computed manually using AC and AN fields if AF field isn't present
+
 # 0.10.0 (2020-12-03)
 
 - Added an option to use an allele frequency threshold for variants. This requires the input VCF to contain an 'AF'
