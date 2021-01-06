@@ -1,3 +1,7 @@
+# 0.10.2 (2021-01-06)
+
+- Fix error when no allele frequency threshold is specified
+
 # 0.10.1 (2020-12-07)
 
 - Allele frequency is now computed manually using AC and AN fields if AF field isn't present

@@ -63,7 +63,7 @@ Optional arguments:
 | argument           | type      | description                                    |
 |--------------------|-----------|------------------------------------------------|
 | -r, --reference    | \<str\>   | genome reference (hg19, hg38)                  |
-| -t, --threads      | \<int\>   | experiment directory                           |
+| -t, --threads      | \<int\>   | number of parallel threads to use              |
 | -s, --seed         | \<int\>   | random seed for cross-validation               |
 | -k, --kfolds       | \<int\>   | number of cross-validation folds               |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis              |
@@ -88,7 +88,7 @@ Optional arguments:
 | argument           | type      | description                                       |
 |--------------------|-----------|---------------------------------------------------|
 | -r, --reference    | \<str\>   | genome reference (hg19, hg38)                     |
-| -t, --threads      | \<int\>   | experiment directory                              |
+| -t, --threads      | \<int\>   | number of parallel threads to use                 |
 | -s, --seed         | \<int\>   | random seed for cross-validation                  |
 | -k, --kfolds       | \<int\>   | number of cross-validation folds                  |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis                 |

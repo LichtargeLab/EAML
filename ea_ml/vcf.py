@@ -32,7 +32,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None):
     gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
     for anno_gene, ea, sample_info, af in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
-        if not ea or gene != anno_gene or af > af_threshold:
+        if not ea or gene != anno_gene or (af_threshold and af > af_threshold):
             continue
         gts = pd.Series([convert_zygo(sample_info[sample]['GT']) for sample in samples], index=samples)
         for i, ft_name in enumerate(feature_names):
