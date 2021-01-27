@@ -10,15 +10,15 @@ from pysam import VariantFile
 from tqdm import tqdm
 
 
-def parse_vcf(vcf_fn, reference, samples, n_jobs=1, af_threshold=None):
+def parse_vcf(vcf_fn, reference, samples, n_jobs=1, af_threshold=None, af_field='AF'):
     features = Parallel(n_jobs=n_jobs)(delayed(parse_gene)(vcf_fn, gene, reference.loc[gene], samples,
-                                                           af_threshold=af_threshold)
+                                                           af_threshold=af_threshold, af_field=af_field)
                                        for gene in tqdm(reference.index.unique()))
     design_matrix = pd.concat(dict(features), axis=1)
     return design_matrix
 
 
-def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None):
+def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None, af_field='AF'):
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
     vcf = VariantFile(vcf_fn)
@@ -31,7 +31,8 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None):
     cds_end = gene_reference['cdsEnd'].max()
     gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
-    for anno_gene, ea, sample_info, af in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
+    variants = fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end, af_field=af_field)
+    for anno_gene, ea, sample_info, af in variants:
         if not ea or gene != anno_gene or (af_threshold and af > af_threshold):
             continue
         gts = pd.Series([convert_zygo(sample_info[sample]['GT']) for sample in samples], index=samples)
@@ -44,7 +45,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, af_threshold=None):
 
 
 # util functions
-def fetch_variants(vcf, contig=None, start=None, stop=None):
+def fetch_variants(vcf, contig=None, start=None, stop=None, af_field='AF'):
     """
     Iterates over all variants (splitting variants with overlapping gene annotations).
 
@@ -53,35 +54,40 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
         contig (str): Chromosome of interest
         start (int): The starting nucleotide position of the region of interest
         stop (int): The ending nucleotide position of the region of interest
+        af_field (str): Column containing AF info
 
     Yields:
         str: Gene name
         ndarray: EA scores corresponding to the gene
         VariantRecordSamples: Container for sample genotypes and info
+        float: Allele frequency
     """
     for rec in vcf.fetch(contig=contig, start=start, stop=stop):
         if type(rec.info['gene']) == tuple:  # check for overlapping gene annotations
-            for var in _split_genes(rec):
+            for var in _split_genes(rec, af_field=af_field):
                 yield var
         else:
             ea = refactor_EA(rec.info['EA'])
-            af = _get_af(rec)
+            af = _get_af(rec, af_field=af_field)
             yield rec.info['gene'], ea, rec.samples, af
 
 
-def _get_af(rec):
-    try:  # if AF isn't annotated, compute using AC and AN fields
-        af = rec.info['AF'][0]
-    except KeyError:
-        af = rec.info['AC'] / rec.info['AN']
+def _get_af(rec, af_field='AF'):
+    if af_field == 'AF':
+        try:  # if AF isn't annotated, compute using AC and AN fields
+            af = rec.info['AF'][0]
+        except KeyError:
+            af = rec.info['AC'] / rec.info['AN']
+    else:
+        af = rec.info[af_field]
     return af
 
 
-def _split_genes(rec):
+def _split_genes(rec, af_field='AF'):
     ea_d = defaultdict(list)
     score = rec.info['EA']
     genes = rec.info['gene']
-    af = _get_af(rec)
+    af = _get_af(rec, af_field=af_field)
     geneset = set(genes)
     if len(score) == len(genes):
         for g, s in zip(genes, score):

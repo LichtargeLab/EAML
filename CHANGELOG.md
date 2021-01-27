@@ -1,3 +1,8 @@
+# 0.10.3 (2021-01-27)
+
+- Added argument for specifying the name of the AF field. This can be used to AF 
+  fields calculated from external datasets.
+
 # 0.10.2 (2021-01-06)
 
 - Fix error when no allele frequency threshold is specified

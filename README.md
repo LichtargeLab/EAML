@@ -68,6 +68,7 @@ Optional arguments:
 | -k, --kfolds       | \<int\>   | number of cross-validation folds               |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis              |
 | -a, --af           | \<float\> | sets allele frequency threshold                |
+| --af-field         | \<str\>   | field with AF information                      |
 | --keep-matrix      | \<bool\>  | keeps design matrix after analysis completes   |
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
@@ -93,6 +94,7 @@ Optional arguments:
 | -k, --kfolds       | \<int\>   | number of cross-validation folds                  |
 | -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis                 |
 | -a, --af           | \<float\> | sets allele frequency threshold                   |
+| --af-field         | \<str\>   | field with AF information                         |
 | -n, --n_runs       | \<int\>   | number of permutations to include in distribution |
 | --restart          | \<int\>   | restart permutations from this number             |
 | -c, --clean        | \<bool\>  | clean design matrix and permutation files         |
