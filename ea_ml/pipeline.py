@@ -48,10 +48,10 @@ class Pipeline(object):
         if self.kfolds == -1:
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
-    def compute_matrix(self, af_threshold=None):
+    def compute_matrix(self, af_threshold=None, af_field='AF'):
         """Computes the full design matrix from an input VCF"""
         self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs,
-                                    af_threshold=af_threshold)
+                                    af_threshold=af_threshold, af_field=af_field)
 
     def load_matrix(self):
         """Load precomputed matrix with multi-indexed columns"""
@@ -133,7 +133,7 @@ def _load_reference(reference, X_chrom=False):
 
 
 def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False,
-              X_chrom=False, af_threshold=None):
+              X_chrom=False, af_threshold=None, af_field='AF'):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
@@ -149,7 +149,7 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, kfolds=kfolds)
     # either compute design matrix from VCF or load existing one
     if '.vcf' in str(data_fn):
-        pipeline.compute_matrix(af_threshold=af_threshold)
+        pipeline.compute_matrix(af_threshold=af_threshold, af_field=af_field)
     else:
         pipeline.load_matrix()
     print('Design matrix loaded.')
