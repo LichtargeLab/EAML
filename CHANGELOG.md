@@ -1,3 +1,8 @@
+# 0.10.4 (2021-01-28)
+
+- Split AF cutoff argument into max-af and min-af options
+- Lots of code cleanup
+
 # 0.10.3 (2021-01-27)
 
 - Added argument for specifying the name of the AF field. This can be used to AF 

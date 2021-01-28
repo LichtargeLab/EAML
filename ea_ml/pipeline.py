@@ -48,10 +48,10 @@ class Pipeline(object):
         if self.kfolds == -1:
             self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
-    def compute_matrix(self, af_threshold=None, af_field='AF'):
+    def compute_matrix(self, min_af=None, max_af=None, af_field='AF'):
         """Computes the full design matrix from an input VCF"""
         self.matrix = 1 - parse_vcf(self.data_fn, self.reference, list(self.targets.index), n_jobs=self.n_jobs,
-                                    af_threshold=af_threshold, af_field=af_field)
+                                    min_af=min_af, max_af=max_af, af_field=af_field)
 
     def load_matrix(self):
         """Load precomputed matrix with multi-indexed columns"""
@@ -132,8 +132,8 @@ def _load_reference(reference, X_chrom=False):
     return reference_df
 
 
-def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111, kfolds=10, keep_matrix=False,
-              X_chrom=False, af_threshold=None, af_field='AF'):
+def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', cpus=1, seed=111, kfolds=10, keep_matrix=False,
+              include_X=False, min_af=None, max_af=None, af_field='AF'):
     # check for JAVA_HOME
     assert os.environ['JAVA_HOME'] is not None
 
@@ -143,13 +143,13 @@ def run_ea_ml(exp_dir, data_fn, sample_fn, reference='hg19', n_jobs=1, seed=111,
     exp_dir = exp_dir.expanduser().resolve()
     data_fn = data_fn.expanduser().resolve()
     samples = pd.read_csv(sample_fn, header=None, dtype={0: str, 1: int}).set_index(0).squeeze()
-    reference_df = _load_reference(reference, X_chrom=X_chrom)
+    reference_df = _load_reference(reference, X_chrom=include_X)
 
     # initialize pipeline
-    pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=n_jobs, kfolds=kfolds)
+    pipeline = Pipeline(exp_dir, data_fn, samples, reference_df, n_jobs=cpus, kfolds=kfolds)
     # either compute design matrix from VCF or load existing one
     if '.vcf' in str(data_fn):
-        pipeline.compute_matrix(af_threshold=af_threshold, af_field=af_field)
+        pipeline.compute_matrix(min_af=min_af, max_af=max_af, af_field=af_field)
     else:
         pipeline.load_matrix()
     print('Design matrix loaded.')

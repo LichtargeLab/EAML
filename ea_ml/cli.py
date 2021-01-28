@@ -10,6 +10,22 @@ from .visualize import visualize
 from .permute import run_permutations
 
 
+def main_args(parser):
+    parser.add_argument('data_fn', type=Path,
+                        help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
+    parser.add_argument('samples',
+                        help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
+    parser.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
+    parser.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
+    parser.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
+    parser.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
+    parser.add_argument('-X', '--include-X', action='store_true', help='includes X chromosome in analysis')
+    parser.add_argument('--max-af', type=float, default=1, help='maximum allele frequency cutoff')
+    parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
+    parser.add_argument('--af-field', help='name of INFO field with AF values', default='AF')
+    parser.add_argument('--cpus', type=int, default=1, help='number of CPUs to use for multiprocessing')
+
+
 # noinspection PyTypeChecker
 def main(args=None, function=None):
     """Process command-line arguments and run the program."""
@@ -20,33 +36,14 @@ def main(args=None, function=None):
     # Pipeline parser
     info = 'run the EA-ML analysis'
     sub = subs.add_parser('run', help=info)
-    sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
-    sub.add_argument('data', type=Path,
-                     help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
-    sub.add_argument('samples', help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
-    sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
-    sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
-    sub.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
-    sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
-    sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
-    sub.add_argument('-a', '--af', type=float, help='SNV allele frequency cutoff')
-    sub.add_argument('--af-column', help='name of column with AF values', default='AF')
+    main_args(sub)
     sub.add_argument('--keep-matrix', action='store_true', help='keep design matrix after analysis')
 
     # Permutation experiment parser
     info = 'analyze significance of MCC scores through label permutations'
     sub = subs.add_parser('permute', help=info)
-    sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
-    sub.add_argument('data', type=Path, help='Path to VCF file')
-    sub.add_argument('samples', help='Path to samples list containing original corresponding labels')
+    main_args(sub)
     sub.add_argument('predictions', help='Path to real experiment results')
-    sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
-    sub.add_argument('-t', '--threads', type=int, default=1, help='number of parallel threads')
-    sub.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
-    sub.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
-    sub.add_argument('-X', '--X-chromosome', action='store_true', help='includes X chromosome in analysis')
-    sub.add_argument('-a', '--af', type=float, help='SNV allele frequency cutoff')
-    sub.add_argument('--af-field', help='name of INFO field with AF values', default='AF')
     sub.add_argument('-n', '--n_runs', type=int, default=100,
                      help='Number of permutations to include in distribution')
     sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
@@ -55,7 +52,7 @@ def main(args=None, function=None):
     # Visualize parser
     info = 'visualize results of EA-ML analysis'
     sub = subs.add_parser('visualize', help=info)
-    sub.add_argument('experiment_dir', type=Path, help='root directory for experiment')
+    sub.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
     sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
     sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
     sub.add_argument('-o', '--output', type=Path, help='location to output figures')
@@ -73,27 +70,18 @@ def main(args=None, function=None):
 
 
 def _get_command(function, namespace):
-    args = [namespace.experiment_dir]
-    kwargs = {}
+    kwargs = vars(namespace)
+    args = None
 
-    if namespace.command == 'run':
+    if kwargs.pop('command') == 'run':
         function = run_ea_ml
-        args += [namespace.data, namespace.samples]
-        kwargs.update(reference=namespace.reference, n_jobs=namespace.threads, seed=namespace.seed,
-                      kfolds=namespace.kfolds, keep_matrix=namespace.keep_matrix, X_chrom=namespace.X_chromosome,
-                      af_threshold=namespace.af, af_field=namespace.af_field)
-    elif namespace.command == 'permute':
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples'))
+    elif kwargs.pop('command') == 'permute':
         function = run_permutations
-        args += [namespace.data, namespace.samples, namespace.predictions]
-        kwargs.update(reference=namespace.reference, n_jobs=namespace.threads, seed=namespace.seed,
-                      kfolds=namespace.kfolds, n_runs=namespace.n_runs, restart=namespace.restart,
-                      clean=namespace.clean, X_chrom=namespace.X_chromosome, af_threshold=namespace.af,
-                      af_field=namespace.af_field)
-    elif namespace.command == 'visualize':
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples', 'predictions'))
+    elif kwargs.pop('command') == 'visualize':
         function = visualize
-        output = namespace.output
-        args.append(output) if output else args.append(namespace.experiment_dir)
-        kwargs.update(dpi=namespace.dpi, prefix=namespace.prefix, reference=namespace.reference)
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'output'))
 
     return function, args, kwargs
 
