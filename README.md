@@ -54,22 +54,23 @@ Required arguments (note: don't include the argument name in the command line):
 
 | argument       | type          | description                                       |
 |----------------|---------------|---------------------------------------------------|
-| experiment_dir | \<directory\> | experiment directory                              |
 | data           | \<file\>      | VCF or multi-indexed Pandas DataFrame in CSV      |
 | samples        | \<file\>      | two-column CSV with sample IDs and disease status |
 
 Optional arguments:
 
-| argument           | type      | description                                    |
-|--------------------|-----------|------------------------------------------------|
-| -r, --reference    | \<str\>   | genome reference (hg19, hg38)                  |
-| -t, --threads      | \<int\>   | number of parallel threads to use              |
-| -s, --seed         | \<int\>   | random seed for cross-validation               |
-| -k, --kfolds       | \<int\>   | number of cross-validation folds               |
-| -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis              |
-| -a, --af           | \<float\> | sets allele frequency threshold                |
-| --af-field         | \<str\>   | field with AF information                      |
-| --keep-matrix      | \<bool\>  | keeps design matrix after analysis completes   |
+| argument             | type      | description                                    |
+|----------------------|-----------|------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                           |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                  |
+| -t, --cpus           | \<int\>   | number of CPUs to use                          |
+| -s, --seed           | \<int\>   | random seed for cross-validation               |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds               |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis              |
+| --min-af             | \<float\> | sets minimum allele frequency threshold        |
+| --max-af             | \<float\> | sets maximum allele frequency threshold        |
+| --af-field           | \<str\>   | field with AF information                      |
+| --keep-matrix        | \<bool\>  | keeps design matrix after analysis completes   |
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
@@ -79,42 +80,38 @@ Required arguments:
 
 | argument       | type          | description                                       |
 |----------------|---------------|---------------------------------------------------|
-| experiment_dir | \<directory\> | experiment directory                              |
 | data           | \<file\>      | VCF or multi-indexed Pandas DataFrame in CSV      |
 | samples        | \<file\>      | two-column CSV with sample IDs and disease status |
 | predictions    | \<file\>      | EA-ML results                                     |
 
 Optional arguments:
 
-| argument           | type      | description                                       |
-|--------------------|-----------|---------------------------------------------------|
-| -r, --reference    | \<str\>   | genome reference (hg19, hg38)                     |
-| -t, --threads      | \<int\>   | number of parallel threads to use                 |
-| -s, --seed         | \<int\>   | random seed for cross-validation                  |
-| -k, --kfolds       | \<int\>   | number of cross-validation folds                  |
-| -X, --X-chromosome | \<bool\>  | includes X chromosome in analysis                 |
-| -a, --af           | \<float\> | sets allele frequency threshold                   |
-| --af-field         | \<str\>   | field with AF information                         |
-| -n, --n_runs       | \<int\>   | number of permutations to include in distribution |
-| --restart          | \<int\>   | restart permutations from this number             |
-| -c, --clean        | \<bool\>  | clean design matrix and permutation files         |
+| argument             | type      | description                                       |
+|----------------------|-----------|---------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                              |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                     |
+| -t, --threads        | \<int\>   | number of parallel threads to use                 |
+| -s, --seed           | \<int\>   | random seed for cross-validation                  |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                  |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                 |
+| --min-af             | \<float\> | sets minimum allele frequency threshold           |
+| --max-af             | \<float\> | sets maximum allele frequency threshold           |
+| --af-field           | \<str\>   | field with AF information                         |
+| -n, --n_runs         | \<int\>   | number of permutations to include in distribution |
+| --restart            | \<int\>   | restart permutations from this number             |
+| -c, --clean          | \<bool\>  | clean design matrix and permutation files         |
 
 ### Visualize experimental results
 
-Required arguments:
-
-| argument       | type          | description          |
-|----------------|---------------|----------------------|
-| experiment_dir | \<directory\> | experiment directory |
-
 Optional arguments:
 
-| argument        | type          | description                    |
-|-----------------|---------------|--------------------------------|
-| --dpi           | \<int\>       | DPI for output figures         |
-| -o, --output    | \<directory\> | location to output figures     |
-| -p, --prefix    | \<str\>       | prefix for output file names   |
-| -r, --reference | \<str\>       | genome reference (hg19, hg38)  |
+| argument             | type          | description                    |
+|----------------------|---------------|--------------------------------|
+| -e, --experiment_dir | \<str\>       | experiment directory           |
+| --dpi                | \<int\>       | DPI for output figures         |
+| -o, --output         | \<directory\> | location to output figures     |
+| -p, --prefix         | \<str\>       | prefix for output file names   |
+| -r, --reference      | \<str\>       | genome reference (hg19, hg38)  |
 
 ## Input Requirements
 
