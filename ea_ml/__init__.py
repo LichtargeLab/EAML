@@ -1,7 +1,7 @@
 """Package for pyEA-ML"""
 
 __project__ = 'pyEA-ML'
-__version__ = '0.10.4'
+__version__ = '0.10.5'
 
 CLI = 'ea-ml'
 VERSION = f'{__project__} v{__version__}'
