@@ -1,4 +1,8 @@
-# 0.10.4 (2021-01-28)
+# 0.10.5 (2021-01-28)
+
+- fixed README typos
+
+# 0.10.4 (2021-01-27)
 
 - Split AF cutoff argument into max-af and min-af options
 - Lots of code cleanup

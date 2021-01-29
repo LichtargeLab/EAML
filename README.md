@@ -63,13 +63,13 @@ Optional arguments:
 |----------------------|-----------|------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                           |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                  |
-| -t, --cpus           | \<int\>   | number of CPUs to use                          |
-| -s, --seed           | \<int\>   | random seed for cross-validation               |
-| -k, --kfolds         | \<int\>   | number of cross-validation folds               |
-| -X, --include-X      | \<bool\>  | includes X chromosome in analysis              |
 | --min-af             | \<float\> | sets minimum allele frequency threshold        |
 | --max-af             | \<float\> | sets maximum allele frequency threshold        |
 | --af-field           | \<str\>   | field with AF information                      |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis              |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds               |
+| -s, --seed           | \<int\>   | random seed for cross-validation               |
+| --cpus               | \<int\>   | number of CPUs to use                          |
 | --keep-matrix        | \<bool\>  | keeps design matrix after analysis completes   |
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
@@ -90,14 +90,14 @@ Optional arguments:
 |----------------------|-----------|---------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                              |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                     |
-| -t, --threads        | \<int\>   | number of parallel threads to use                 |
-| -s, --seed           | \<int\>   | random seed for cross-validation                  |
-| -k, --kfolds         | \<int\>   | number of cross-validation folds                  |
-| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                 |
 | --min-af             | \<float\> | sets minimum allele frequency threshold           |
 | --max-af             | \<float\> | sets maximum allele frequency threshold           |
 | --af-field           | \<str\>   | field with AF information                         |
 | -n, --n_runs         | \<int\>   | number of permutations to include in distribution |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                 |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                  |
+| -s, --seed           | \<int\>   | random seed for cross-validation                  |
+| --cpus               | \<int\>   | number of CPUs to use                             |
 | --restart            | \<int\>   | restart permutations from this number             |
 | -c, --clean          | \<bool\>  | clean design matrix and permutation files         |
 
