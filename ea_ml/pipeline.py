@@ -32,6 +32,17 @@ class Pipeline(object):
     """
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
+    class_params = {
+        'PART': '-M 5 -C 0.25 -Q 1',
+        'JRip': '-F 3 -N 2.0 -O 2 -S 1 -P',
+        'RandomForest': '-I 10 -K 0 -S 1',
+        'J48': '-C 0.25 -M 5',
+        'NaiveBayes': '',
+        'Logistic': '-R 1.0E-8 -M -1',
+        'IBk': '-K 3 -W 0 -A \".LinearNNSearch -A \\\".EuclideanDistance -R first-last\\\"\"',
+        'AdaBoostM1': '-P 100 -S 1 -I 10 -W .DecisionStump',
+        'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
+    }
 
     def __init__(self, expdir, data_fn, sample_targets, reference, n_jobs=1, kfolds=10):
         self.n_jobs = n_jobs
@@ -40,13 +51,6 @@ class Pipeline(object):
         self.targets = sample_targets
         self.reference = reference
         self.kfolds = kfolds
-
-        # load classifier information
-        self.clf_info = pd.read_csv(resource_filename('ea_ml', 'data/classifiers.csv'),
-                                    converters={'options': lambda x: x[1:-1].split(',')})
-        # Adaboost doesn't work for Leave-One-Out due to it's implicit sample weighting
-        if self.kfolds == -1:
-            self.clf_info = self.clf_info[self.clf_info.classifier != 'Adaboost']
 
     def compute_matrix(self, min_af=None, max_af=None, af_field='AF'):
         """Computes the full design matrix from an input VCF"""

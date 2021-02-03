@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import re
-from collections import defaultdict
 from itertools import product
 
 import numpy as np
