@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 """Main script for EA-ML pipeline."""
 import datetime
-import os
 import shutil
 import time
+from collections import defaultdict
 from pathlib import Path
-from joblib import delayed, Parallel
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
+from joblib import delayed, Parallel
 from pkg_resources import resource_filename
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
+from tqdm import tqdm
 
 from .vcf import parse_gene
 from .weka_wrapper import eval_gene
+
+
 # TODO: finish and update docstrings
 
 
@@ -64,6 +66,7 @@ class Pipeline(object):
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
         self.report_results(gene_results)
+        self.cleanup()
 
     def compute_gene_dmatrix(self, gene):
         """Computes the full design matrix from an input VCF"""
@@ -100,61 +103,41 @@ class Pipeline(object):
         Args:
             gene_results (list): Results of Weka fitting, in the format of (gene, score dict)
         """
-        # TODO: finish reporting refactor
-        pass
-
-    def summarize_experiment(self):
-        """Combines results from Weka experiment files"""
-        worker_files = (self.expdir / 'tmp').glob('worker-*.results.csv')
-        dfs = [pd.read_csv(fn, header=None, index_col=[0, 1]) for fn in worker_files]
-        result_df = pd.concat(dfs).sort_index()
-        result_df.index.rename(['gene', 'classifier'], inplace=True)
-        if self.kfolds == -1:
-            result_df.columns = ['TP', 'TN', 'FP', 'FN', 'MCC']
-        else:
-            result_df.columns = [str(i) for i in range(self.kfolds)]
-            result_df['meanMCC'] = result_df.mean(axis=1)
-        result_df.sort_values(['gene', 'classifier'], inplace=True)
-        result_df.to_csv(self.expdir / 'full-worker-results.csv')
-        self.full_result_df = result_df
-
-    def write_results(self):
-        cv_df = pd.DataFrame(index=self.reference.index.unique())
-        cv_df.index.rename('gene', inplace=True)
-
-        # write summary file for each classifier and aggregate mean MCCs
-        for clf in self.clf_info['classifier']:
-            clf_df = self.full_result_df.xs(clf, level='classifier')
-            clf_df.to_csv(self.expdir / (clf + '-recap.csv'))
-            if self.kfolds == -1:
-                # if LOO, only a single MCC is present per gene
-                cv_df[clf] = clf_df['MCC']
-            else:
-                cv_df[clf] = clf_df['meanMCC']
-        cv_df.to_csv(self.expdir / 'gene-MCC-summary.csv')
-
-        # fetch mean MCC for each gene and write final rankings files
-        meanMCC_df = pd.concat([cv_df.mean(axis=1), cv_df.std(axis=1)], axis=1)
-        meanMCC_df.columns = ['meanMCC', 'std']
-        meanMCC_df.sort_values('meanMCC', ascending=False, inplace=True)
-        meanMCC_df.to_csv(self.expdir / 'meanMCC-results.csv')
-
-        # generate z-score and p-value stats
-        mean_stats = compute_stats(meanMCC_df, ensemble_type='mean')
-        mean_stats.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
+        mcc_df_dict = defaultdict(list)
+        for gene, mcc_results in gene_results:
+            mcc_df_dict[gene].append(gene)
+            for clf, mcc in mcc_results.items():
+                mcc_df_dict[clf].append(mcc)
+        mcc_df = pd.DataFrame(mcc_df_dict).set_index('gene')
+        clfs = mcc_df.columns
+        mcc_df['mean'] = mcc_df.mean(axis=1)
+        mcc_df['std'] = mcc_df[clfs].std(axis=1)
+        mcc_df.sort_values('mean', ascending=False, inplace=True)
+        mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
+        stats_df = compute_stats(mcc_df[['mean', 'std']])
+        stats_df.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.rankings')
 
     def cleanup(self):
         """Cleans tmp directory"""
         shutil.rmtree(self.expdir / 'tmp/')
 
 
-def compute_stats(results_df, ensemble_type='mean'):
-    """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
-    nonzero = results_df.loc[results_df[f'{ensemble_type}MCC'] != 0].copy()
-    nonzero['logMCC'] = np.log(nonzero[f'{ensemble_type}MCC'] + 1 - np.min(nonzero[f'{ensemble_type}MCC']))
+def compute_stats(results_df):
+    """
+    Generate z-score and p-value statistics for all non-zero MCC scored genes
+
+    Args:
+        results_df (DataFrame):
+
+    Returns:
+        DataFrame:
+    """
+    nonzero = results_df.loc[results_df[f'mean'] != 0].copy()
+    nonzero.rename(columns={'mean': 'meanMCC'}, inplace=True)
+    nonzero['logMCC'] = np.log(nonzero.meanMCC + 1 - np.min(nonzero.meanMCC))
     nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
     nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
-    nonzero['fdr'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
+    nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
     return nonzero
 
 
@@ -181,7 +164,6 @@ def run_ea_ml(exp_dir, data_fn, targets_fn, reference='hg19', cpus=1, seed=111, 
     pipeline.run()
     print('Gene scoring completed. Analysis summary in experiment directory.')
 
-    pipeline.cleanup()
     end = time.time()
     elapsed = str(datetime.timedelta(seconds=end - start))
     print(f'Time elapsed: {elapsed}')
