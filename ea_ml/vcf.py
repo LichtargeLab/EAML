@@ -1,21 +1,10 @@
 #!/usr/bin/env python
 import re
-from collections import defaultdict
 from itertools import product
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from pysam import VariantFile
-from tqdm import tqdm
-
-
-def parse_vcf(vcf_fn, reference, samples, n_jobs=1, min_af=None, max_af=None, af_field='AF'):
-    features = Parallel(n_jobs=n_jobs)(delayed(parse_gene)(vcf_fn, gene, reference.loc[gene], samples, min_af=min_af,
-                                                           max_af=max_af, af_field=af_field)
-                                       for gene in tqdm(reference.index.unique()))
-    design_matrix = pd.concat(dict(features), axis=1)
-    return design_matrix
 
 
 def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, af_field='AF'):
@@ -43,7 +32,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
             for score in ea:
                 mask = (score >= cutoff[1]) & (gts >= cutoff[0])
                 gene_df[ft_name] *= (1 - (score * mask) / 100)**gts
-    return gene, gene_df
+    return 1 - gene_df
 
 
 # util functions
