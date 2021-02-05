@@ -5,8 +5,7 @@ import argparse
 from pathlib import Path
 
 from . import VERSION, DESCRIPTION, CLI
-from .pipeline import run_ea_ml
-from .visualize import visualize
+from .pipeline import Pipeline
 from .permute import run_permutations
 
 
@@ -27,7 +26,7 @@ def main_args(parser):
 
 
 # noinspection PyTypeChecker
-def main(args=None, function=None):
+def main():
     """Process command-line arguments and run the program."""
     parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION)
     parser.add_argument('-v', '--version', action='version', version=VERSION)
@@ -37,10 +36,11 @@ def main(args=None, function=None):
     info = 'run the EA-ML analysis'
     sub = subs.add_parser('run', help=info)
     main_args(sub)
-    sub.add_argument('--keep-matrix', action='store_true', help='keep design matrix after analysis')
+    sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
+    sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
 
     # Permutation experiment parser
-    info = 'analyze significance of MCC scores through label permutations'
+    info = 'analyze significance of MCC scores through label permutations (experimental)'
     sub = subs.add_parser('permute', help=info)
     main_args(sub)
     sub.add_argument('predictions', help='Path to real experiment results')
@@ -49,41 +49,25 @@ def main(args=None, function=None):
     sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
     sub.add_argument('-c', '--clean', action='store_true', help='clean design matrix and permutation files')
 
-    # Visualize parser
-    info = 'visualize results of EA-ML analysis'
-    sub = subs.add_parser('visualize', help=info)
-    sub.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
-    sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
-    sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
-    sub.add_argument('-o', '--output', type=Path, help='location to output figures')
-    sub.add_argument('-p', '--prefix', default='', help='prefix for output files')
-
     # Parse arguments
-    namespace = parser.parse_args(args=args)
-
+    namespace = parser.parse_args()
     # Run the program
-    function, args, kwargs = _get_command(function, namespace)
-    if function is None:
-        parser.print_help()
-        sys.exit(1)
-    function(*args, **kwargs)
+    run_program(parser, namespace)
 
 
-def _get_command(function, namespace):
+def run_program(parser, namespace):
     kwargs = vars(namespace)
-    args = None
 
     if kwargs.pop('command') == 'run':
-        function = run_ea_ml
         args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples'))
+        pipeline = Pipeline(*args, **kwargs)
+        pipeline.run()
     elif kwargs.pop('command') == 'permute':
-        function = run_permutations
         args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples', 'predictions'))
-    elif kwargs.pop('command') == 'visualize':
-        function = visualize
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'output'))
-
-    return function, args, kwargs
+        run_permutations(*args, **kwargs)
+    else:
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from .vcf import parse_gene
 from .weka_wrapper import eval_gene
+from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 
 
 # TODO: finish and update docstrings
@@ -43,7 +44,7 @@ class Pipeline(object):
         'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
     }
 
-    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', n_jobs=1, kfolds=10, seed=111,
+    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', n_jobs=1, kfolds=10, seed=111, dpi=150,
                  weka_path='/opt/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
@@ -59,14 +60,22 @@ class Pipeline(object):
         self.max_af = max_af
         self.af_field = af_field
         self.n_jobs = n_jobs
+        self.dpi = dpi
         self.write_data = write_data
 
     def run(self):
+        start = time.time()
         gene_results = Parallel(n_jobs=self.n_jobs)(
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
-        self.report_results(gene_results)
+        self.raw_results = gene_results
+        self.report_results()
+        print('Gene scoring completed. Analysis summary in experiment directory.')
+        self.visualize()
         self.cleanup()
+        end = time.time()
+        elapsed = str(datetime.timedelta(seconds=end - start))
+        print(f'Time elapsed: {elapsed}')
 
     def compute_gene_dmatrix(self, gene):
         """Computes the full design matrix from an input VCF"""
@@ -96,15 +105,21 @@ class Pipeline(object):
                                 expdir=self.expdir, weka_path=self.weka_path)
         return gene, mcc_results
 
-    def report_results(self, gene_results):
-        """
-        Summarize and rank gene scores
+    def compute_stats(self):
+        """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
+        mcc_df = self.full_results[['mean', 'std']]
+        nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
+        nonzero.rename(columns={'mean': 'meanMCC'}, inplace=True)
+        nonzero['logMCC'] = np.log(nonzero.meanMCC + 1 - np.min(nonzero.meanMCC))
+        nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
+        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
+        nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
+        return nonzero
 
-        Args:
-            gene_results (list): Results of Weka fitting, in the format of (gene, score dict)
-        """
+    def report_results(self):
+        """Summarize and rank gene scores"""
         mcc_df_dict = defaultdict(list)
-        for gene, mcc_results in gene_results:
+        for gene, mcc_results in self.raw_results:
             mcc_df_dict[gene].append(gene)
             for clf, mcc in mcc_results.items():
                 mcc_df_dict[clf].append(mcc)
@@ -114,31 +129,21 @@ class Pipeline(object):
         mcc_df['std'] = mcc_df[clfs].std(axis=1)
         mcc_df.sort_values('mean', ascending=False, inplace=True)
         mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
-        stats_df = compute_stats(mcc_df[['mean', 'std']])
+        self.full_results = mcc_df
+        stats_df = self.compute_stats()
         stats_df.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.rankings')
+        self.nonzero_results = stats_df
+
+    def visualize(self):
+        mcc_scatter(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
+        mcc_hist(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
+        mcc_scatter(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
+        mcc_hist(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.png')
+        manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.svg')
 
     def cleanup(self):
         """Cleans tmp directory"""
         shutil.rmtree(self.expdir / 'tmp/')
-
-
-def compute_stats(results_df):
-    """
-    Generate z-score and p-value statistics for all non-zero MCC scored genes
-
-    Args:
-        results_df (DataFrame):
-
-    Returns:
-        DataFrame:
-    """
-    nonzero = results_df.loc[results_df[f'mean'] != 0].copy()
-    nonzero.rename(columns={'mean': 'meanMCC'}, inplace=True)
-    nonzero['logMCC'] = np.log(nonzero.meanMCC + 1 - np.min(nonzero.meanMCC))
-    nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
-    nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
-    nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
-    return nonzero
 
 
 def load_reference(reference, include_X=False):
@@ -152,18 +157,3 @@ def load_reference(reference, include_X=False):
     if include_X is False:
         reference_df = reference_df[reference_df.chrom != 'chrX']
     return reference_df
-
-
-def run_ea_ml(exp_dir, data_fn, targets_fn, reference='hg19', cpus=1, seed=111, kfolds=10, write_data=False,
-              include_X=False, min_af=None, max_af=None, af_field='AF'):
-    start = time.time()
-
-    # initialize pipeline
-    pipeline = Pipeline(exp_dir, data_fn, targets_fn, reference=reference, n_jobs=cpus, kfolds=kfolds, seed=seed,
-                        min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X, write_data=write_data)
-    pipeline.run()
-    print('Gene scoring completed. Analysis summary in experiment directory.')
-
-    end = time.time()
-    elapsed = str(datetime.timedelta(seconds=end - start))
-    print(f'Time elapsed: {elapsed}')

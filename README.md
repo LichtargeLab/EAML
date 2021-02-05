@@ -70,11 +70,13 @@ Optional arguments:
 | -k, --kfolds         | \<int\>   | number of cross-validation folds               |
 | -s, --seed           | \<int\>   | random seed for cross-validation               |
 | --cpus               | \<int\>   | number of CPUs to use                          |
-| --keep-matrix        | \<bool\>  | keeps design matrix after analysis completes   |
+| --write-data         | \<bool\>  | keeps design matrix after analysis completes   |
+| --dpi                | \<int\>   | DPI for output figures                         |
+
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
-### Permutation Analysis
+### Permutation Analysis (experimental)
 
 Required arguments:
 
@@ -108,7 +110,6 @@ Optional arguments:
 | argument             | type          | description                    |
 |----------------------|---------------|--------------------------------|
 | -e, --experiment_dir | \<str\>       | experiment directory           |
-| --dpi                | \<int\>       | DPI for output figures         |
 | -o, --output         | \<directory\> | location to output figures     |
 | -p, --prefix         | \<str\>       | prefix for output file names   |
 | -r, --reference      | \<str\>       | genome reference (hg19, hg38)  |

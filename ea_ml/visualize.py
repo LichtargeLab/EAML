@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from .pipeline import _load_reference
-
 sns.set(context='talk', style='ticks')
 
 
@@ -113,20 +111,3 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     fig.tight_layout()
     sns.despine()
     return fig
-
-
-def visualize(exp_dir, out_dir, prefix='', dpi=150, reference='hg19'):
-    reference_df = _load_reference(reference, X_chrom=True)
-    if prefix:
-        prefix = prefix + '.'
-
-    results = pd.read_csv(exp_dir / 'meanMCC-results.csv', index_col=0).sort_values('meanMCC', ascending=False)
-    mcc_scatter(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.png')
-    mcc_hist(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.png')
-
-    stat_results = pd.read_csv(exp_dir / 'meanMCC-results.nonzero-stats.csv', index_col=0).sort_values('meanMCC', ascending=False)
-    mcc_scatter(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.nonzero.png')
-    mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-hist.nonzero.png')
-    manhattan_plot(stat_results, reference_df, dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-manhattan.svg')
