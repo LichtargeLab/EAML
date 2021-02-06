@@ -10,9 +10,9 @@ from .permute import run_permutations
 
 
 def main_args(parser):
-    parser.add_argument('data_fn', type=Path,
+    parser.add_argument('data', type=Path,
                         help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
-    parser.add_argument('samples',
+    parser.add_argument('targets',
                         help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
     parser.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
     parser.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
@@ -23,6 +23,7 @@ def main_args(parser):
     parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
     parser.add_argument('--af-field', help='name of INFO field with AF values', default='AF')
     parser.add_argument('--cpus', type=int, default=1, help='number of CPUs to use for multiprocessing')
+    parser.add_argument('-w', '--weka-path', default='/opt/weka', help='path to Weka install directory')
 
 
 # noinspection PyTypeChecker
@@ -59,11 +60,11 @@ def run_program(parser, namespace):
     kwargs = vars(namespace)
 
     if kwargs.pop('command') == 'run':
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples'))
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets'))
         pipeline = Pipeline(*args, **kwargs)
         pipeline.run()
     elif kwargs.pop('command') == 'permute':
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples', 'predictions'))
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions'))
         run_permutations(*args, **kwargs)
     else:
         parser.print_help()

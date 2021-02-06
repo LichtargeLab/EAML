@@ -8,25 +8,25 @@ import shutil
 import numpy as np
 import pandas as pd
 
-from .pipeline import run_ea_ml
+from .pipeline import Pipeline
 
 
-def permute_labels(samples_fn, run_dir):
+def permute_targets(targets_fn, run_dir):
     """
     Permutes the case/control labels and writes out the new sample list.
 
     Args:
-        samples_fn (str): Path to the original sample,target list
+        targets_fn (str): Path to the original sample,target list
         run_dir (Path): Path to the specific permutation directory
 
     Returns:
         perm_labels_path (str): Path to the output permuted sample list
     """
-    targets = pd.read_csv(samples_fn, header=None, dtypes={0: str, 1: int}, index_col=0, squeeze=True)
+    targets = pd.read_csv(targets_fn, header=None, dtypes={0: str, 1: int}, index_col=0, squeeze=True)
     permuted_targets = pd.Series(np.random.permutation(targets), index=targets.index)
-    perm_labels_path = run_dir / 'label_permutation.csv'
-    permuted_targets.to_csv(perm_labels_path, header=False, index=False)
-    return perm_labels_path
+    perm_targets_path = run_dir / 'label_permutation.csv'
+    permuted_targets.to_csv(perm_targets_path, header=False, index=False)
+    return perm_targets_path
 
 
 def merge_runs(exp_dir, n_runs=100):
@@ -65,8 +65,9 @@ def compute_zscores(preds_fn, perm_results):
     return rand_results
 
 
-def run_permutations(exp_dir, data_fn, samples_fn, preds_fn, reference='hg19', cpus=1, seed=111, kfolds=10, n_runs=100,
-                     restart=0, clean=False, include_X=False, min_af=None, max_af=None, af_field='AF'):
+def run_permutations(exp_dir, data_fn, targets_fn, preds_fn, reference='hg19', cpus=1, seed=111, kfolds=10, n_runs=100,
+                     restart=0, clean=False, include_X=False, min_af=None, max_af=None, af_field='AF',
+                     weka_path='/opt/weka'):
     if restart > 0:  # restart permutation count from here
         start = restart
     else:  # the default, no restart
@@ -74,14 +75,19 @@ def run_permutations(exp_dir, data_fn, samples_fn, preds_fn, reference='hg19', c
     for i in range(start, n_runs + 1):
         run_dir = exp_dir / f'run{i}'
         run_dir.mkdir()
-        new_labels = permute_labels(samples_fn, run_dir)
-        run_ea_ml(run_dir, data_fn, new_labels, reference=reference, cpus=cpus, seed=seed, kfolds=kfolds,
-                  keep_matrix=True, include_X=include_X, min_af=min_af, max_af=max_af, af_field=af_field)
-        if '.vcf' in str(data_fn):
-            data_fn = exp_dir / 'design_matrix.csv.gz'
-            shutil.move(str(data_fn), str(exp_dir))
-    # aggregate background distributions
+        new_targets_fn = permute_targets(targets_fn, run_dir)
+        if '.vcf' in data_fn.suffixes:  # if starting with raw input data, save dmatrices for later permutations
+            write_data = True
+        else:
+            write_data = False
+        pipeline = Pipeline(run_dir, data_fn, new_targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
+                            weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
+                            write_data=write_data)
+        pipeline.run()
+        if '.vcf' in data_fn.suffixes:
+            data_fn = (run_dir / 'dmatrices.h5').rename(exp_dir / 'dmatrices.h5')
 
+    # aggregate background distributions
     perm_dist = merge_runs(exp_dir, n_runs)
     perm_dist.to_csv(exp_dir / 'random_distributions.csv')
     # compute stats on observed score vs. background

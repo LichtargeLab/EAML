@@ -4,7 +4,7 @@ from subprocess import run, STDOUT, DEVNULL
 
 
 def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
-    weka_jar = f'{weka_path}/weka.jar'
+    weka_jar = str(Path(weka_path) / 'weka.jar')
     weka_call = f'java -Xmx1g -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
     weka_out = run(weka_call, shell=True, stdout=STDOUT, stderr=DEVNULL).stdout
     return parse_weka_output(weka_out)

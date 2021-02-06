@@ -25,7 +25,7 @@ from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 class Pipeline(object):
     """
     Attributes:
-        n_jobs (int): number of parallel jobs
+        cpus (int): number of CPUs for multiprocessing
         expdir (Path): filepath to experiment folder
         data_fn (Path): filepath to data input file (either a VCF or multi-indexed DataFrame)
         targets (Series): Array of target labels for training/prediction
@@ -44,7 +44,7 @@ class Pipeline(object):
         'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
     }
 
-    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', n_jobs=1, kfolds=10, seed=111, dpi=150,
+    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
                  weka_path='/opt/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
@@ -59,13 +59,13 @@ class Pipeline(object):
         self.min_af = min_af
         self.max_af = max_af
         self.af_field = af_field
-        self.n_jobs = n_jobs
+        self.cpus = cpus
         self.dpi = dpi
         self.write_data = write_data
 
     def run(self):
         start = time.time()
-        gene_results = Parallel(n_jobs=self.n_jobs)(
+        gene_results = Parallel(n_jobs=self.cpus)(
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
         self.raw_results = gene_results
