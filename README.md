@@ -22,8 +22,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 
 To install the conda environment:
 ```bash
-chmod +x pyEA-ML/install_env.sh
-bash pyEA-ML/install_env.sh
+conda env create -f pyEA-ML/environment.yml
 ```
 
 ## Usage

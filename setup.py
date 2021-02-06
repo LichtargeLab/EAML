@@ -28,6 +28,7 @@ setuptools.setup(
         'scipy>=1.2.1',
         'seaborn>=0.9.0',
         'statsmodels>=0.10.1',
+        'tables>=3.6.1',
         'tqdm'
     ]
 )
