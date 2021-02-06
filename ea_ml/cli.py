@@ -15,7 +15,7 @@ def main_args(parser):
     parser.add_argument('targets',
                         help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
     parser.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
-    parser.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
+    parser.add_argument('-r', '--reference', default='hg19', help='genome reference name')
     parser.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     parser.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     parser.add_argument('-X', '--include-X', action='store_true', help='includes X chromosome in analysis')
