@@ -19,6 +19,8 @@ def main_args(parser):
     parser.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     parser.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     parser.add_argument('-X', '--include-X', action='store_true', help='includes X chromosome in analysis')
+    parser.add_argument('--parse-EA', default='all', choices=('all', 'min', 'max', 'mean', 'canonical'),
+                        help='how to parse EA scores from different transcripts')
     parser.add_argument('--max-af', type=float, default=1, help='maximum allele frequency cutoff')
     parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
     parser.add_argument('--af-field', help='name of INFO field with AF values', default='AF')

@@ -23,15 +23,6 @@ from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 
 
 class Pipeline(object):
-    """
-    Attributes:
-        cpus (int): number of CPUs for multiprocessing
-        expdir (Path): filepath to experiment folder
-        data_fn (Path): filepath to data input file (either a VCF or multi-indexed DataFrame)
-        targets (Series): Array of target labels for training/prediction
-        reference (DataFrame): reference background for genes
-        kfolds (int): Number of folds for cross-validation
-    """
     class_params = {
         'PART': '-M 5 -C 0.25 -Q 1',
         'JRip': '-F 3 -N 2.0 -O 2 -S 1 -P',
@@ -45,7 +36,8 @@ class Pipeline(object):
     }
 
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
-                 weka_path='/opt/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False):
+                 weka_path='/opt/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
+                 parse_EA='all'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -62,6 +54,7 @@ class Pipeline(object):
         self.cpus = cpus
         self.dpi = dpi
         self.write_data = write_data
+        self.EA_parser = parse_EA
 
     def run(self):
         start = time.time()
@@ -81,7 +74,7 @@ class Pipeline(object):
         """Computes the full design matrix from an input VCF"""
         gene_reference = self.reference.loc[gene]
         dmatrix = parse_gene(self.data_fn, gene, gene_reference, self.targets.index, min_af=self.min_af,
-                             max_af=self.max_af, af_field=self.af_field)
+                             max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
         if self.write_data:
             dmatrix.to_hdf(self.expdir / 'dmatrices.h5', key=gene, complevel=5, complib='zlib', format='fixed')
         return dmatrix

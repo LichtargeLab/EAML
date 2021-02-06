@@ -7,7 +7,7 @@ import pandas as pd
 from pysam import VariantFile
 
 
-def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, af_field='AF'):
+def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, af_field='AF', EA_parser='all'):
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
     vcf = VariantFile(vcf_fn)
@@ -18,10 +18,11 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
         contig = gene_reference['chrom'].strip('chr')
     cds_start = gene_reference['cdsStart'].min()
     cds_end = gene_reference['cdsEnd'].max()
+    canon_nm = get_canon_nm(gene_reference)
     gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
 
     for rec in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
-        ea = refactor_EA(rec.info['EA'])
+        ea = refactor_EA(rec.info['EA'], rec.info['NM'], canon_nm, EA_parser=EA_parser)
 
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if ea and gene == rec.info['gene'] and pass_af_check:
@@ -55,6 +56,12 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
                 yield var
         else:
             yield rec
+
+
+def get_canon_nm(gene_reference):
+    nm_numbers = [int(nm.strip('NM_')) for nm in list(gene_reference.name)]
+    minpos = np.argmin(nm_numbers)
+    return gene_reference.name.iloc[minpos]
 
 
 def af_check(rec, af_field='AF', max_af=None, min_af=None):
@@ -103,12 +110,15 @@ def split_genes(rec):
         yield var
 
 
-def refactor_EA(EA):
+def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     """
     Refactors EA to a list of floats and NaN.
 
     Args:
         EA (list/tuple): The EA scores parsed from a variant
+        nm_ids (list/tuple): Transcript IDs corresponding to EA scores
+        canon_nm (str): Canonical NM ID based on smallest numbered transcript
+        EA_parser (str): How to aggregate multiple transcript scores
 
     Returns:
         list: The new list of scores, refactored as float or NaN
@@ -116,16 +126,26 @@ def refactor_EA(EA):
     Note: EA must be string type, otherwise regex search will raise an error.
     """
     newEA = []
-    for score in EA:
-        try:
-            score = float(score)
-        except (ValueError, TypeError):
-            if re.search(r'fs-indel', score) or re.search(r'STOP', score):
-                score = 100
-            else:
-                continue
-        newEA.append(score)
-    return newEA
+    if EA_parser == 'canonical' and canon_nm in nm_ids:
+        return EA[nm_ids.index(canon_nm)]
+    else:
+        for score in EA:
+            try:
+                score = float(score)
+            except (ValueError, TypeError):
+                if re.search(r'fs-indel', score) or re.search(r'STOP', score):
+                    score = 100
+                else:
+                    continue
+            newEA.append(score)
+        if EA_parser == 'mean':
+            return np.nanmean(newEA)
+        elif EA_parser == 'max':
+            return np.nanmax(newEA)
+        elif EA_parser == 'min':
+            return np.nanmin(newEA)
+        else:
+            return newEA
 
 
 def convert_zygo(genotype):
