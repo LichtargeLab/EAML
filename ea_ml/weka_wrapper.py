@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 from pathlib import Path
-from subprocess import run, STDOUT, DEVNULL
+from subprocess import run, DEVNULL, PIPE
 
 
 def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
     weka_jar = str(Path(weka_path) / 'weka.jar')
     weka_call = f'java -Xmx1g -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
-    weka_out = run(weka_call, shell=True, stdout=STDOUT, stderr=DEVNULL).stdout
-    return parse_weka_output(weka_out)
+    weka_out = run(weka_call, shell=True, stderr=DEVNULL, stdout=PIPE, text=True)
+    return parse_weka_output(weka_out.stdout)
 
 
 def parse_weka_output(stdout):

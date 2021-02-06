@@ -4,7 +4,6 @@ import datetime
 import shutil
 import time
 from collections import defaultdict
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,6 +12,7 @@ from pkg_resources import resource_filename
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
+from tables.exceptions import HDF5ExtError
 
 from .vcf import parse_gene
 from .weka_wrapper import eval_gene
@@ -58,6 +58,7 @@ class Pipeline(object):
 
     def run(self):
         start = time.time()
+        (self.expdir / 'tmp').mkdir(exist_ok=True)
         gene_results = Parallel(n_jobs=self.cpus)(
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
@@ -73,10 +74,16 @@ class Pipeline(object):
     def compute_gene_dmatrix(self, gene):
         """Computes the full design matrix from an input VCF"""
         gene_reference = self.reference.loc[gene]
-        dmatrix = parse_gene(self.data_fn, gene, gene_reference, self.targets.index, min_af=self.min_af,
+        dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
         if self.write_data:
-            dmatrix.to_hdf(self.expdir / 'dmatrices.h5', key=gene, complevel=5, complib='zlib', format='fixed')
+            written = False
+            while written is False:
+                try:
+                    dmatrix.to_hdf(self.expdir / 'dmatrices.h5', key=gene, complevel=5, complib='zlib', format='fixed')
+                    written = True
+                except HDF5ExtError:
+                    pass
         return dmatrix
 
     def eval_gene(self, gene):
@@ -94,7 +101,7 @@ class Pipeline(object):
             gene_dmatrix = pd.read_hdf(hdf_fn, key=gene)
         else:
             gene_dmatrix = self.compute_gene_dmatrix(gene)
-        mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.seed,
+        mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
                                 expdir=self.expdir, weka_path=self.weka_path)
         return gene, mcc_results
 

@@ -59,9 +59,12 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
 
 
 def get_canon_nm(gene_reference):
-    nm_numbers = [int(nm.strip('NM_')) for nm in list(gene_reference.name)]
-    minpos = np.argmin(nm_numbers)
-    return gene_reference.name.iloc[minpos]
+    if type(gene_reference) == pd.DataFrame:
+        nm_numbers = [int(nm.strip('NM_')) for nm in list(gene_reference['name'])]
+        minpos = np.argmin(nm_numbers)
+        return gene_reference['name'].iloc[minpos]
+    else:
+        return gene_reference['name']
 
 
 def af_check(rec, af_field='AF', max_af=None, min_af=None):
