@@ -19,10 +19,8 @@ from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 from .weka_wrapper import eval_gene
 
 
-# TODO: finish and update docstrings
-
-
 class Pipeline(object):
+    # TODO: add Pipeline docstrings
     class_params = {
         'PART': '-M 5 -C 0.25 -Q 1',
         'JRip': '-F 3 -N 2.0 -O 2 -S 1 -P',
