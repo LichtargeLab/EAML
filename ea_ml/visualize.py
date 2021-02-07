@@ -10,7 +10,7 @@ sns.set(context='talk', style='ticks')
 
 def mcc_scatter(results, column='meanMCC', dpi=150):
     """
-    Scatter plot of maxMCC results.
+    Scatterplot of maxMCC results
 
     Args:
         results (DataFrame): Scored results from EA-ML
@@ -33,7 +33,7 @@ def mcc_scatter(results, column='meanMCC', dpi=150):
 
 def mcc_hist(results, column='meanMCC', dpi=150):
     """
-    Histogram of maxMCC results.
+    Histogram of MCC scores
 
     Args:
         results (DataFrame): Scored results from EA-ML

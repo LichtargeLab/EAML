@@ -11,12 +11,12 @@ from joblib import delayed, Parallel
 from pkg_resources import resource_filename
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
-from tqdm import tqdm
 from tables.exceptions import HDF5ExtError
+from tqdm import tqdm
 
 from .vcf import parse_gene
-from .weka_wrapper import eval_gene
 from .visualize import mcc_hist, mcc_scatter, manhattan_plot
+from .weka_wrapper import eval_gene
 
 
 # TODO: finish and update docstrings
@@ -57,6 +57,7 @@ class Pipeline(object):
         self.EA_parser = parse_EA
 
     def run(self):
+        """Run full pipeline from start to finish"""
         start = time.time()
         (self.expdir / 'tmp').mkdir(exist_ok=True)
         gene_results = Parallel(n_jobs=self.cpus)(
@@ -72,7 +73,15 @@ class Pipeline(object):
         print(f'Time elapsed: {elapsed}')
 
     def compute_gene_dmatrix(self, gene):
-        """Computes the full design matrix from an input VCF"""
+        """
+        Computes the full design matrix from an input VCF
+
+        Args:
+            gene (str): HGSC gene symbol
+
+        Returns:
+            DataFrame: EA design matrix for gene-of-interest
+        """
         gene_reference = self.reference.loc[gene]
         dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
@@ -106,7 +115,12 @@ class Pipeline(object):
         return gene, mcc_results
 
     def compute_stats(self):
-        """Generate z-score and p-value statistics for all non-zero MCC scored genes"""
+        """
+        Generate z-score and p-value statistics for all non-zero MCC scored genes
+
+        Returns:
+            DataFrame: EA-ML results with non-zero MCCs and computed z-scores, p-values, and adjusted p-values
+        """
         mcc_df = self.full_results[['mean', 'std']]
         nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
         nonzero.rename(columns={'mean': 'meanMCC'}, inplace=True)
@@ -120,7 +134,7 @@ class Pipeline(object):
         """Summarize and rank gene scores"""
         mcc_df_dict = defaultdict(list)
         for gene, mcc_results in self.raw_results:
-            mcc_df_dict[gene].append(gene)
+            mcc_df_dict['gene'].append(gene)
             for clf, mcc in mcc_results.items():
                 mcc_df_dict[clf].append(mcc)
         mcc_df = pd.DataFrame(mcc_df_dict).set_index('gene')
@@ -135,6 +149,10 @@ class Pipeline(object):
         self.nonzero_results = stats_df
 
     def visualize(self):
+        """
+        Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
+        histograms of MCC scores
+        """
         mcc_scatter(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
         mcc_hist(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
         mcc_scatter(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
@@ -147,6 +165,16 @@ class Pipeline(object):
 
 
 def load_reference(reference, include_X=False):
+    """
+    Loads reference file of gene positions
+
+    Args:
+        reference (str): Either human genome reference name (hg19 or hg38), or filepath to custom reference
+        include_X (bool): Whether or not to include X chromosome genes in analysis
+
+    Returns:
+        DataFrame: DataFrame with chromosome and position information for each annotated transcript
+    """
     if reference == 'hg19':
         reference_fn = resource_filename('ea_ml', 'data/hg19-refGene.protein-coding.txt')
     elif reference == 'hg38':

@@ -8,6 +8,22 @@ from pysam import VariantFile
 
 
 def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, af_field='AF', EA_parser='all'):
+    """
+    Parse EA scores and compute pEA design matrix for a given gene
+
+    Args:
+        vcf_fn (Path-like): Filepath to VCF
+        gene (str): HGSC gene symbol
+        gene_reference (DataFrame/Series): Reference information for given gene's transcripts
+        samples (list): sample IDs
+        min_af (float): Minimum allele frequency for variants
+        max_af (float): Maximum allele frequency for variants
+        af_field (str): Name of INFO field containing allele frequency information
+        EA_parser (str): How to parse EA scores from multiple transcripts
+
+    Returns:
+        DataFrame: pEA design matrix
+    """
     feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (1, 30, 70)))
     vcf = VariantFile(vcf_fn)
@@ -19,7 +35,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
     cds_start = gene_reference['cdsStart'].min()
     cds_end = gene_reference['cdsEnd'].max()
     canon_nm = get_canon_nm(gene_reference)
-    gene_df = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=('D1', 'D30', 'D70', 'R1', 'R30', 'R70'))
+    dmatrix = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=feature_names)
 
     for rec in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
         ea = refactor_EA(rec.info['EA'], rec.info['NM'], canon_nm, EA_parser=EA_parser)
@@ -30,16 +46,18 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
         gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
         for i, ft_name in enumerate(feature_names):
             cutoff = ft_cutoffs[i]
-            for score in ea:
-                mask = (score >= cutoff[1]) & (gts >= cutoff[0])
-                gene_df[ft_name] *= (1 - (score * mask) / 100)**gts
-    return 1 - gene_df
+            if type(ea) == list:
+                for score in ea:
+                    pEA(dmatrix, score, gts, cutoff, ft_name)
+            else:
+                pEA(dmatrix, ea, gts, cutoff, ft_name)
+    return 1 - dmatrix
 
 
 # util functions
 def fetch_variants(vcf, contig=None, start=None, stop=None):
     """
-    Iterates over all variants (splitting variants with overlapping gene annotations).
+    Variant iterator
 
     Args:
         vcf (VariantFile): pysam VariantFile
@@ -58,7 +76,21 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
             yield rec
 
 
+def pEA(dmatrix, ea, gts, cutoff, ft_name):
+    mask = (ea >= cutoff[1]) & (gts >= cutoff[0])
+    dmatrix[ft_name] *= (1 - (ea * mask) / 100) ** gts
+
+
 def get_canon_nm(gene_reference):
+    """
+    Parse "canonical" transcript based on smallest NM ID number
+
+    Args:
+        gene_reference (DataFrame/Series): Reference information for given gene's transcripts
+
+    Returns:
+        str: Canonical transcript NM ID
+    """
     if type(gene_reference) == pd.DataFrame:
         nm_numbers = [int(nm.strip('NM_')) for nm in list(gene_reference['name'])]
         minpos = np.argmin(nm_numbers)
@@ -68,6 +100,18 @@ def get_canon_nm(gene_reference):
 
 
 def af_check(rec, af_field='AF', max_af=None, min_af=None):
+    """
+    Check if variant allele frequency passes filters
+
+    Args:
+        rec (VariantRecord)
+        af_field (str): Name of INFO field containing allele frequency information
+        max_af (float): Maximum allele frequency for variant
+        min_af (float): Minimum allele frequency for variant
+
+    Returns:
+        bool: True of AF passes filters, otherwise False
+    """
     if max_af is None and min_af is None:
         return True
     elif max_af is None:
@@ -83,7 +127,7 @@ def af_check(rec, af_field='AF', max_af=None, min_af=None):
 def split_genes(rec):
     """
     If a variant has overlapping gene annotations, it will be split into separate records with correct corresponding
-    transcripts, substitutions, and EA scores.
+    transcripts, substitutions, and EA scores
 
     Args:
         rec (VariantRecord)
@@ -115,7 +159,7 @@ def split_genes(rec):
 
 def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     """
-    Refactors EA to a list of floats and NaN.
+    Parse EA scores for a given variant
 
     Args:
         EA (list/tuple): The EA scores parsed from a variant
@@ -124,11 +168,12 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
         EA_parser (str): How to aggregate multiple transcript scores
 
     Returns:
-        list: The new list of scores, refactored as float or NaN
+        float/list: Valid EA scores, refactored as floats
 
     Note: EA must be string type, otherwise regex search will raise an error.
     """
     newEA = []
+    # Note: will always return list
     if EA_parser == 'canonical' and canon_nm in nm_ids:
         return EA[nm_ids.index(canon_nm)]
     else:
@@ -153,7 +198,7 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
 
 def convert_zygo(genotype):
     """
-    Converts a genotype tuple to a zygosity integer.
+    Convert a genotype tuple to a zygosity integer
 
     Args:
         genotype (tuple): The genotype of a variant for a sample

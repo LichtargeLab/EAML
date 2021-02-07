@@ -10,6 +10,7 @@ from .permute import run_permutations
 
 
 def main_args(parser):
+    """Common arguments for all modules"""
     parser.add_argument('data', type=Path,
                         help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
     parser.add_argument('targets',
@@ -59,6 +60,13 @@ def main():
 
 
 def run_program(parser, namespace):
+    """
+    Call specified module of pipeline
+
+    Args:
+        parser (ArgumentParser): The command-line parser
+        namespace (Namespace): The parsed argument namespace
+"""
     kwargs = vars(namespace)
 
     if kwargs.pop('command') == 'run':

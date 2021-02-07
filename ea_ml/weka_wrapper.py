@@ -4,13 +4,36 @@ from subprocess import run, DEVNULL, PIPE
 
 
 def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
-    weka_jar = str(Path(weka_path) / 'weka.jar')
+    """
+    Wrapper that calls Weka JVM as subprocess
+
+    Args:
+        clf (str): Name of classifier class in Weka
+        clf_params (str): String of classifier-specific hyperparameters
+        arff_fn (Path-like): Filepath to intermediate ARFF file of gene design matrix
+        weka_path (Path-like): Filepath to Weka directory
+        cv (int): Number of folds for cross-validation
+        seed (int): Random seed
+
+    Returns:
+        float: mean MCC score from cross-validation
+    """
+    weka_jar = Path(weka_path) / 'weka.jar'
     weka_call = f'java -Xmx1g -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
     weka_out = run(weka_call, shell=True, stderr=DEVNULL, stdout=PIPE, text=True)
     return parse_weka_output(weka_out.stdout)
 
 
 def parse_weka_output(stdout):
+    """
+    Parse output from single classifier's cross-validation
+
+    Args:
+        stdout (str): Stdout from Weka subprocess
+
+    Returns:
+        float: mean MCC score from cross-validation
+    """
     stdout = stdout.split('\n')
     for i, ln in enumerate(stdout):
         ln = [string for string in ln.split(' ') if string]
@@ -23,6 +46,22 @@ def parse_weka_output(stdout):
 
 
 def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='/opt/weka'):
+    """
+    Evaluate gene's classification performance across all Pipeline classifiers
+
+    Args:
+        gene (str): HGSC gene symbol
+        dmatrix (DataFrame): EA design matrix
+        targets (Series): Target classes for all samples
+        clf_calls (dict): Mapping of Weka classifier to hyperparameter string
+        seed (int): Random seed
+        cv (int): Number of folds for cross-validation
+        expdir (Path-like): Filepath to experiment directory
+        weka_path (Path-like): Filepath to Weka directory
+
+    Returns:
+        dict: Mapping of classifier to mean MCC score
+    """
     mcc_results = {}
     if cv == -1:
         cv = len(dmatrix)
@@ -35,13 +74,13 @@ def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.
 
 def write_arff(design_matrix, targets, f_out):
     """
-        Outputs an .arff file corresponding to the DataFrame
+    Output a .arff file corresponding to given gene's design matrix
 
-        Args:
-            design_matrix (DataFrame): design matrix for a single gene
-            targets (Series): disease labels
-            f_out (Path): filepath for the output
-        """
+    Args:
+        design_matrix (DataFrame): EA design matrix
+        targets (Series): Target classes for all samples
+        f_out (Path): filepath for the ARFF file
+    """
     def _write_rows(examples):
         for example, label in examples:
             example = [str(x) for x in example]
