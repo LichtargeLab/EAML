@@ -39,18 +39,16 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
 
     for rec in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
         ea = refactor_EA(rec.info['EA'], rec.info['NM'], canon_nm, EA_parser=EA_parser)
-
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
-        if ea and gene == rec.info['gene'] and pass_af_check:
-            continue
-        gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
-        for i, ft_name in enumerate(feature_names):
-            cutoff = ft_cutoffs[i]
-            if type(ea) == list:
-                for score in ea:
-                    pEA(dmatrix, score, gts, cutoff, ft_name)
-            else:
-                pEA(dmatrix, ea, gts, cutoff, ft_name)
+        if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
+            gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
+            for i, ft_name in enumerate(feature_names):
+                cutoff = ft_cutoffs[i]
+                if type(ea) == list:
+                    for score in ea:
+                        pEA(dmatrix, score, gts, cutoff, ft_name)
+                else:
+                    pEA(dmatrix, ea, gts, cutoff, ft_name)
     return 1 - dmatrix
 
 
@@ -175,18 +173,13 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     newEA = []
     # Note: will always return list
     if EA_parser == 'canonical' and canon_nm in nm_ids:
-        return EA[nm_ids.index(canon_nm)]
+        return EA_to_float(EA[nm_ids.index(canon_nm)])
     else:
         for score in EA:
-            try:
-                score = float(score)
-            except (ValueError, TypeError):
-                if re.search(r'fs-indel', score) or re.search(r'STOP', score):
-                    score = 100
-                else:
-                    continue
-            newEA.append(score)
-        if EA_parser == 'mean':
+            newEA.append(EA_to_float(score))
+        if np.isnan(newEA).all():
+            return np.nan
+        elif EA_parser == 'mean':
             return np.nanmean(newEA)
         elif EA_parser == 'max':
             return np.nanmax(newEA)
@@ -213,3 +206,23 @@ def convert_zygo(genotype):
     else:
         zygo = 0
     return zygo
+
+
+def EA_to_float(ea):
+    """
+    Converts EA score to float
+
+    Args:
+        ea (str): EA score as string
+
+    Returns:
+        float: EA score between 0-100 if valid, otherwise returns NaN
+    """
+    try:
+        score = float(ea)
+    except (ValueError, TypeError):
+        if re.search(r'fs-indel', ea) or re.search(r'STOP', ea):
+            score = 100
+        else:
+            score = np.nan
+    return score
