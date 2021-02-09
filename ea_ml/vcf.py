@@ -133,10 +133,10 @@ def split_genes(rec):
     Yields:
         VariantRecord
     """
-    def _gene_map(gene_idxs, values):
-        genes = gene_idxs.keys()
-        if len(values) == len([i for l in gene_idxs.values() for i in l]):
-            val_d = {g: [values[i] for i in gene_idxs[g]] for g in genes}
+    def _gene_map(gene_idxs_dict, values):
+        genes = gene_idxs_dict.keys()
+        if len(values) == len([i for gene_idxs in gene_idxs_dict.values() for i in gene_idxs]):
+            val_d = {g: [values[i] for i in gene_idxs_dict[g]] for g in genes}
         elif len(values) == 1:
             val_d = {g: values for g in genes}
         else:
@@ -145,13 +145,16 @@ def split_genes(rec):
 
     ea = rec.info['EA']
     gene = rec.info['gene']
+    nm = rec.info['NM']
     geneset = set(gene)
     idxs = {genekey: [i for i, g in enumerate(gene) if g == genekey] for genekey in geneset}
-    ea_d = _gene_map(idxs, ea)
+    ea_dict = _gene_map(idxs, ea)
+    nm_dict = _gene_map(idxs, nm)
     for g in geneset:
         var = rec.copy()
         var.info['gene'] = g
-        var.info['EA'] = tuple(ea_d[g])
+        var.info['EA'] = tuple(ea_dict[g])
+        var.info['NM'] = tuple(nm_dict[g])
         yield var
 
 
