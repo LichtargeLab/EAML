@@ -63,7 +63,7 @@ class Pipeline(object):
         )
         self.raw_results = gene_results
         self.report_results()
-        print('Gene scoring completed. Analysis summary in experiment directory.')
+        print('\nGene scoring completed. Analysis summary in experiment directory.')
         self.visualize()
         self.cleanup()
         end = time.time()
@@ -151,8 +151,8 @@ class Pipeline(object):
         Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
-        mcc_scatter(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
-        mcc_hist(self.raw_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
+        mcc_scatter(self.full_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
+        mcc_hist(self.full_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
         mcc_scatter(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
         mcc_hist(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.png')
         manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.svg')

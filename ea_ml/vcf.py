@@ -160,8 +160,8 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     Parse EA scores for a given variant
 
     Args:
-        EA (list/tuple): The EA scores parsed from a variant
-        nm_ids (list/tuple): Transcript IDs corresponding to EA scores
+        EA (tuple): The EA scores parsed from a variant
+        nm_ids (tuple): Transcript IDs corresponding to EA scores
         canon_nm (str): Canonical NM ID based on smallest numbered transcript
         EA_parser (str): How to aggregate multiple transcript scores
 
@@ -173,7 +173,10 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     newEA = []
     # Note: will always return list
     if EA_parser == 'canonical' and canon_nm in nm_ids:
-        return EA_to_float(EA[nm_ids.index(canon_nm)])
+        if len(EA) > 1:
+            return EA_to_float(EA[nm_ids.index(canon_nm)])
+        else:
+            return EA_to_float(EA[0])
     else:
         for score in EA:
             newEA.append(EA_to_float(score))
