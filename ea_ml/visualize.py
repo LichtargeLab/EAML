@@ -8,7 +8,7 @@ import seaborn as sns
 sns.set(context='talk', style='ticks')
 
 
-def mcc_scatter(results, column='meanMCC', dpi=150):
+def mcc_scatter(results, column='MCC', dpi=150):
     """
     Scatterplot of maxMCC results
 
@@ -31,7 +31,7 @@ def mcc_scatter(results, column='meanMCC', dpi=150):
     return fig
 
 
-def mcc_hist(results, column='meanMCC', dpi=150):
+def mcc_hist(results, column='MCC', dpi=150):
     """
     Histogram of MCC scores
 
@@ -73,7 +73,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     reference['chrom'] = reference['chrom'].str.strip('chr').astype(int)
     reference.sort_values(['chrom', 'cdsStart'], inplace=True)
     reference['pos'] = range(len(reference))
-    fdr_cutoff = mcc_df.loc[mcc_df.fdr <= 0.1, 'pvalue'].max()
+    fdr_cutoff = mcc_df.loc[mcc_df.qvalue <= 0.1, 'pvalue'].max()
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
     colors = ['black', 'grey']
@@ -94,7 +94,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
                     fontsize=8)
     # top gene annotation
     bbox_props = dict(boxstyle='round', fc='w', ec='0.5')
-    if len(mcc_df.loc[mcc_df.fdr <= 0.1]) < 30:
+    if len(mcc_df.loc[mcc_df.qvalue <= 0.1]) < 30:
         for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index:
             _label_point(gene)
     else:
