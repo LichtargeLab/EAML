@@ -1,3 +1,24 @@
+# 1.0.0 (2021-02-10)
+
+- Removed dependency on `python-weka-wrapper3` package
+  - This wrapper and how it implemented the JVM for Weka caused incompatibilities with multiprocessing, so we originally
+    had to use workarounds that obfuscated the machine learning code and made it difficult to follow the program flow
+  - The wrapper also depended on the `javabridge` package, which sometimes caused issues with virtual environment
+    and pipeline initialization if the system path didn't properly identify a Java installation
+  - We replaced this with direct calls to the Weka command-line with the `subprocess` package
+- Cross-validation is now performed by the Weka command-line; this only reports the final mean MCC for each classifier,
+  but removes `scikit-learn` dependency for generating CV folds
+- Each gene is now treated as a separate worker process from the start of VCF processing through the results reporting
+- The `--write-data` argument (previously `--keep-matrix`) now writes each gene design matrix (as a DataFrame) to a
+  HDF file, with the gene name as the key
+- Updated environment requirements, addition of `pytables` requirement
+- Fixed variant EA list and AF filter check, was broken in 0.10.3 - 0.10.5!
+- Removed `visualize` command; figures are now automatically generated at the end of the pipeline
+- Added options for parsing of EA scores from multiple transcripts for a given variant:
+  - The mean/max/min EA score
+  - The 'canonical' transcript (defined by the smallest NM ID number from the gene reference)
+  - All EA scores (includes each transcript EA in the pEA product; this was the original method)
+  
 # 0.10.5 (2021-01-28)
 
 - fixed README typos
