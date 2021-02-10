@@ -19,7 +19,7 @@ from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 from .weka_wrapper import eval_gene
 
 
-class Pipeline(object):
+class Pipeline:
     # TODO: add Pipeline docstrings
     class_params = {
         'PART': '-M 5 -C 0.25 -Q 1',
