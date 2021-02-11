@@ -15,7 +15,7 @@
 - Fixed variant EA list and AF filter check, was broken in 0.10.3 - 0.10.5!
 - Removed `visualize` command; figures are now automatically generated at the end of the pipeline
 - Added options for parsing of EA scores from multiple transcripts for a given variant:
-  - The mean/max/min EA score
+  - The mean or max EA score
   - The 'canonical' transcript (defined by the smallest NM ID number from the gene reference)
   - All EA scores (includes each transcript EA in the pEA product; this was the original method)
   

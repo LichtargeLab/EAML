@@ -57,7 +57,7 @@ Optional arguments:
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (min, max, mean, all, canonical)  |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
@@ -88,7 +88,7 @@ Optional arguments:
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (min, max, mean, all, canonical)  |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
