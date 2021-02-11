@@ -123,7 +123,7 @@ class Pipeline:
         mcc_df = self.full_results[['mean', 'std']]
         nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
         nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
-        nonzero['logMCC'] = np.log(nonzero.meanMCC + 1 - np.min(nonzero.meanMCC))
+        nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
         nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
         nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
         nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
