@@ -184,7 +184,9 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     else:
         for score in EA:
             newEA.append(EA_to_float(score))
-        if EA_parser == 'mean':
+        if np.isnan(newEA).all():
+            return np.nan
+        elif EA_parser == 'mean':
             return np.nanmean(newEA)
         elif EA_parser == 'max':
             return np.nanmax(newEA)
