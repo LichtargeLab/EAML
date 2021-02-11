@@ -40,7 +40,7 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
     for rec in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
         ea = refactor_EA(rec.info['EA'], rec.info['NM'], canon_nm, EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
-        if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
+        if np.any(ea) and gene == rec.info['gene'] and pass_af_check:
             gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
             for i, ft_name in enumerate(feature_names):
                 cutoff = ft_cutoffs[i]
@@ -183,9 +183,7 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
     else:
         for score in EA:
             newEA.append(EA_to_float(score))
-        if np.isnan(newEA).all():
-            return np.nan
-        elif EA_parser == 'mean':
+        if EA_parser == 'mean':
             return np.nanmean(newEA)
         elif EA_parser == 'max':
             return np.nanmax(newEA)
@@ -230,5 +228,5 @@ def EA_to_float(ea):
         if re.search(r'fs-indel', ea) or re.search(r'STOP', ea):
             score = 100
         else:
-            score = np.nan
+            score = 0
     return score
