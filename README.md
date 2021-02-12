@@ -15,14 +15,15 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 - OS X or Linux
 - Anaconda3
 - Python 3.7+
-- OpenJDK 8.0.265 or greater
+- OpenJDK 8.0.265+
+- [Weka 3.8.0+](https://waikato.github.io/weka-wiki/downloading_weka/)
+    - Weka must be downloaded separately
 
 ### Installation
 
 To install the conda environment:
 ```bash
-chmod +x pyEA-ML/install_env.sh
-bash pyEA-ML/install_env.sh
+conda env create -f pyEA-ML/environment.yml
 ```
 
 ## Usage
@@ -34,84 +35,72 @@ See available commands:
 ea-ml --help
 ```
 
-Before running the main pipeline, be sure that the `JAVA_HOME` variable is set:
-```bash
-conda activate pyEA-ML
-export JAVA_HOME=${CONDA_PREFIX}
-```
-
-EA-ML can then be run by calling `ea-ml` and one of its commands:
+EA-ML can be run by calling `ea-ml` and one of its commands:
 
 | command     | description                                               |
 |-------------|-----------------------------------------------------------|
 | run         | run the EA-ML analysis                                    |
-| visualize   | visualize results of EA-ML analysis                       |
 | permute     | permute sample labels for evaluating confidence intervals |
 
 ### Main Pipeline
 
 Required arguments (note: don't include the argument name in the command line):
 
-| argument       | type          | description                                       |
-|----------------|---------------|---------------------------------------------------|
-| data           | \<file\>      | VCF or multi-indexed Pandas DataFrame in CSV      |
-| samples        | \<file\>      | two-column CSV with sample IDs and disease status |
+| argument       | type          | description                                              |
+|----------------|---------------|----------------------------------------------------------|
+| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
 
 Optional arguments:
 
-| argument             | type      | description                                    |
-|----------------------|-----------|------------------------------------------------|
-| -e, --experiment_dir | \<str\>   | experiment directory                           |
-| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                  |
-| --min-af             | \<float\> | sets minimum allele frequency threshold        |
-| --max-af             | \<float\> | sets maximum allele frequency threshold        |
-| --af-field           | \<str\>   | field with AF information                      |
-| -X, --include-X      | \<bool\>  | includes X chromosome in analysis              |
-| -k, --kfolds         | \<int\>   | number of cross-validation folds               |
-| -s, --seed           | \<int\>   | random seed for cross-validation               |
-| --cpus               | \<int\>   | number of CPUs to use                          |
-| --keep-matrix        | \<bool\>  | keeps design matrix after analysis completes   |
+| argument             | type      | description                                                                         |
+|----------------------|-----------|-------------------------------------------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                                                                |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
+| --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
+| --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
+| --af-field           | \<str\>   | field with AF information                                                           |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
+| -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
+| --cpus               | \<int\>   | number of CPUs to use                                                               |
+| --write-data         | \<bool\>  | keeps design matrix after analysis completes                                        |
+| --dpi                | \<int\>   | DPI for output figures                                                              |
+| -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
+
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
-### Permutation Analysis
+### Permutation Analysis (experimental)
 
 Required arguments:
 
-| argument       | type          | description                                       |
-|----------------|---------------|---------------------------------------------------|
-| data           | \<file\>      | VCF or multi-indexed Pandas DataFrame in CSV      |
-| samples        | \<file\>      | two-column CSV with sample IDs and disease status |
-| predictions    | \<file\>      | EA-ML results                                     |
+| argument       | type          | description                                              |
+|----------------|---------------|----------------------------------------------------------|
+| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
+| predictions    | \<file\>      | EA-ML results                                            |
 
 Optional arguments:
 
-| argument             | type      | description                                       |
-|----------------------|-----------|---------------------------------------------------|
-| -e, --experiment_dir | \<str\>   | experiment directory                              |
-| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                     |
-| --min-af             | \<float\> | sets minimum allele frequency threshold           |
-| --max-af             | \<float\> | sets maximum allele frequency threshold           |
-| --af-field           | \<str\>   | field with AF information                         |
-| -n, --n_runs         | \<int\>   | number of permutations to include in distribution |
-| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                 |
-| -k, --kfolds         | \<int\>   | number of cross-validation folds                  |
-| -s, --seed           | \<int\>   | random seed for cross-validation                  |
-| --cpus               | \<int\>   | number of CPUs to use                             |
-| --restart            | \<int\>   | restart permutations from this number             |
-| -c, --clean          | \<bool\>  | clean design matrix and permutation files         |
+| argument             | type      | description                                                                         |
+|----------------------|-----------|-------------------------------------------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                                                                |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
+| --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
+| --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
+| --af-field           | \<str\>   | field with AF information                                                           |
+| -n, --n_runs         | \<int\>   | number of permutations to include in distribution                                   |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
+| -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
+| --cpus               | \<int\>   | number of CPUs to use                                                               |
+| --restart            | \<int\>   | restart permutations from this number                                               |
+| -c, --clean          | \<bool\>  | clean design matrix and permutation files                                           |
+| -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
 
-### Visualize experimental results
-
-Optional arguments:
-
-| argument             | type          | description                    |
-|----------------------|---------------|--------------------------------|
-| -e, --experiment_dir | \<str\>       | experiment directory           |
-| --dpi                | \<int\>       | DPI for output figures         |
-| -o, --output         | \<directory\> | location to output figures     |
-| -p, --prefix         | \<str\>       | prefix for output file names   |
-| -r, --reference      | \<str\>       | genome reference (hg19, hg38)  |
 
 ## Input Requirements
 
@@ -130,6 +119,14 @@ Additionally, some extra information is required:
 - Different fields in INFO and FORMAT columns should be defined in the header, with type information
 - 'EA' attribute must be typed as a 'String' (Type=String), this is because of the way EA labels variants by transcript,
   with nonsense, frameshift-indels and STOP loss variants defined as strings in the EA field
+
+## Troubleshooting
+
+- If the program is unable to find the Java installation, set the `JAVA_HOME` environmental variable to wherever Java is
+  installed. If this is in the conda environment, use this:
+```bash
+export JAVA_HOME=${CONDA_PREFIX}
+```
 
 ## Credits
 

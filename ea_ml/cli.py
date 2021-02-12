@@ -5,29 +5,32 @@ import argparse
 from pathlib import Path
 
 from . import VERSION, DESCRIPTION, CLI
-from .pipeline import run_ea_ml
-from .visualize import visualize
+from .pipeline import Pipeline
 from .permute import run_permutations
 
 
 def main_args(parser):
-    parser.add_argument('data_fn', type=Path,
+    """Common arguments for all modules"""
+    parser.add_argument('data', type=Path,
                         help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
-    parser.add_argument('samples',
+    parser.add_argument('targets',
                         help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
     parser.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
-    parser.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
+    parser.add_argument('-r', '--reference', default='hg19', help='genome reference name')
     parser.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     parser.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     parser.add_argument('-X', '--include-X', action='store_true', help='includes X chromosome in analysis')
+    parser.add_argument('--parse-EA', default='all', choices=('all', 'max', 'mean', 'canonical'),
+                        help='how to parse EA scores from different transcripts')
     parser.add_argument('--max-af', type=float, default=1, help='maximum allele frequency cutoff')
     parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
     parser.add_argument('--af-field', help='name of INFO field with AF values', default='AF')
     parser.add_argument('--cpus', type=int, default=1, help='number of CPUs to use for multiprocessing')
+    parser.add_argument('-w', '--weka-path', default='/opt/weka', help='path to Weka install directory')
 
 
 # noinspection PyTypeChecker
-def main(args=None, function=None):
+def main():
     """Process command-line arguments and run the program."""
     parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION)
     parser.add_argument('-v', '--version', action='version', version=VERSION)
@@ -37,10 +40,11 @@ def main(args=None, function=None):
     info = 'run the EA-ML analysis'
     sub = subs.add_parser('run', help=info)
     main_args(sub)
-    sub.add_argument('--keep-matrix', action='store_true', help='keep design matrix after analysis')
+    sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
+    sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
 
     # Permutation experiment parser
-    info = 'analyze significance of MCC scores through label permutations'
+    info = 'analyze significance of MCC scores through label permutations (experimental)'
     sub = subs.add_parser('permute', help=info)
     main_args(sub)
     sub.add_argument('predictions', help='Path to real experiment results')
@@ -49,41 +53,32 @@ def main(args=None, function=None):
     sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
     sub.add_argument('-c', '--clean', action='store_true', help='clean design matrix and permutation files')
 
-    # Visualize parser
-    info = 'visualize results of EA-ML analysis'
-    sub = subs.add_parser('visualize', help=info)
-    sub.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
-    sub.add_argument('-r', '--reference', default='hg19', choices=('hg19', 'hg38'), help='genome reference name')
-    sub.add_argument('--dpi', default=150, type=int, help='DPI for output figures')
-    sub.add_argument('-o', '--output', type=Path, help='location to output figures')
-    sub.add_argument('-p', '--prefix', default='', help='prefix for output files')
-
     # Parse arguments
-    namespace = parser.parse_args(args=args)
-
+    namespace = parser.parse_args()
     # Run the program
-    function, args, kwargs = _get_command(function, namespace)
-    if function is None:
-        parser.print_help()
-        sys.exit(1)
-    function(*args, **kwargs)
+    run_program(parser, namespace)
 
 
-def _get_command(function, namespace):
+def run_program(parser, namespace):
+    """
+    Call specified module of pipeline
+
+    Args:
+        parser (ArgumentParser): The command-line parser
+        namespace (Namespace): The parsed argument namespace
+"""
     kwargs = vars(namespace)
-    args = None
 
     if kwargs.pop('command') == 'run':
-        function = run_ea_ml
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples'))
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets'))
+        pipeline = Pipeline(*args, **kwargs)
+        pipeline.run()
     elif kwargs.pop('command') == 'permute':
-        function = run_permutations
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data_fn', 'samples', 'predictions'))
-    elif kwargs.pop('command') == 'visualize':
-        function = visualize
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'output'))
-
-    return function, args, kwargs
+        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions'))
+        run_permutations(*args, **kwargs)
+    else:
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == '__main__':

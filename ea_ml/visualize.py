@@ -5,14 +5,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from .pipeline import _load_reference
-
 sns.set(context='talk', style='ticks')
 
 
-def mcc_scatter(results, column='meanMCC', dpi=150):
+def mcc_scatter(results, column='MCC', dpi=150):
     """
-    Scatter plot of maxMCC results.
+    Scatterplot of maxMCC results
 
     Args:
         results (DataFrame): Scored results from EA-ML
@@ -33,9 +31,9 @@ def mcc_scatter(results, column='meanMCC', dpi=150):
     return fig
 
 
-def mcc_hist(results, column='meanMCC', dpi=150):
+def mcc_hist(results, column='MCC', dpi=150):
     """
-    Histogram of maxMCC results.
+    Histogram of MCC scores
 
     Args:
         results (DataFrame): Scored results from EA-ML
@@ -75,7 +73,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     reference['chrom'] = reference['chrom'].str.strip('chr').astype(int)
     reference.sort_values(['chrom', 'cdsStart'], inplace=True)
     reference['pos'] = range(len(reference))
-    fdr_cutoff = mcc_df.loc[mcc_df.fdr <= 0.1, 'pvalue'].max()
+    fdr_cutoff = mcc_df.loc[mcc_df.qvalue <= 0.1, 'pvalue'].max()
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
     colors = ['black', 'grey']
@@ -96,7 +94,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
                     fontsize=8)
     # top gene annotation
     bbox_props = dict(boxstyle='round', fc='w', ec='0.5')
-    if len(mcc_df.loc[mcc_df.fdr <= 0.1]) < 30:
+    if len(mcc_df.loc[mcc_df.qvalue <= 0.1]) < 30:
         for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index:
             _label_point(gene)
     else:
@@ -113,20 +111,3 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     fig.tight_layout()
     sns.despine()
     return fig
-
-
-def visualize(exp_dir, out_dir, prefix='', dpi=150, reference='hg19'):
-    reference_df = _load_reference(reference, X_chrom=True)
-    if prefix:
-        prefix = prefix + '.'
-
-    results = pd.read_csv(exp_dir / 'meanMCC-results.csv', index_col=0).sort_values('meanMCC', ascending=False)
-    mcc_scatter(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.png')
-    mcc_hist(results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.png')
-
-    stat_results = pd.read_csv(exp_dir / 'meanMCC-results.nonzero-stats.csv', index_col=0).sort_values('meanMCC', ascending=False)
-    mcc_scatter(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, column='meanMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-hist.nonzero.png')
-    mcc_scatter(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-scatter.nonzero.png')
-    mcc_hist(stat_results, column='logMCC', dpi=dpi).savefig(out_dir / f'{prefix}meanMCC.logMCC-hist.nonzero.png')
-    manhattan_plot(stat_results, reference_df, dpi=dpi).savefig(out_dir / f'{prefix}meanMCC-manhattan.svg')
