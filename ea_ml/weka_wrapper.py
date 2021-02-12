@@ -42,7 +42,10 @@ def parse_weka_output(stdout):
             # two header names are split twice (TP Rate and FP Rate), so the -2 corrects the position
             score_col = ln.index('MCC') - 2
             score_ln = [string for string in stdout[score_row].split(' ') if string]
-            score = float(score_ln[score_col])
+            try:
+                score = float(score_ln[score_col])
+            except ValueError:
+                score = 0
             return score
 
 
