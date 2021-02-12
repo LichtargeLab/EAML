@@ -24,8 +24,8 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
     Returns:
         DataFrame: pEA design matrix
     """
-    feature_names = ('D1', 'D30', 'D70', 'R1', 'R30', 'R70')
-    ft_cutoffs = list(product((1, 2), (1, 30, 70)))
+    feature_names = ('D0', 'D30', 'D70', 'R0', 'R30', 'R70')
+    ft_cutoffs = list(product((1, 2), (0, 30, 70)))
     vcf = VariantFile(vcf_fn)
     vcf.subset_samples(samples)
     if type(gene_reference) == pd.DataFrame:
@@ -46,7 +46,8 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
                 cutoff = ft_cutoffs[i]
                 if type(ea) == list:
                     for score in ea:
-                        pEA(dmatrix, score, gts, cutoff, ft_name)
+                        if not np.isnan(score):
+                            pEA(dmatrix, score, gts, cutoff, ft_name)
                 else:
                     pEA(dmatrix, ea, gts, cutoff, ft_name)
     return 1 - dmatrix
@@ -189,8 +190,6 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
             return np.nanmean(newEA)
         elif EA_parser == 'max':
             return np.nanmax(newEA)
-        elif EA_parser == 'min':
-            return np.nanmin(newEA)
         else:
             return newEA
 
@@ -222,7 +221,7 @@ def EA_to_float(ea):
         ea (str): EA score as string
 
     Returns:
-        float: EA score between 0-100 if valid, otherwise returns NaN
+        float: EA score between 0-100 if valid, otherwise returns 0
     """
     try:
         score = float(ea)

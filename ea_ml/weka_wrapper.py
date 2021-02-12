@@ -26,7 +26,7 @@ def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
 
 def parse_weka_output(stdout):
     """
-    Parse output from single classifier's cross-validation
+    Parse string stdout from single classifier's cross-validation
 
     Args:
         stdout (str): Stdout from Weka subprocess
@@ -38,8 +38,9 @@ def parse_weka_output(stdout):
     for i, ln in enumerate(stdout):
         ln = [string for string in ln.split(' ') if string]
         if 'MCC' in ln:
-            score_row = i + 2
-            score_col = ln.index('MCC')
+            score_row = i + 2  # class 1 is two rows after score header
+            # two header names are split twice (TP Rate and FP Rate), so the -2 corrects the position
+            score_col = ln.index('MCC') - 2
             score_ln = [string for string in stdout[score_row].split(' ') if string]
             score = float(score_ln[score_col])
             return score

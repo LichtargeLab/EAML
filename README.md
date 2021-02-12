@@ -17,6 +17,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 - Python 3.7+
 - OpenJDK 8.0.265+
 - [Weka 3.8.0+](https://waikato.github.io/weka-wiki/downloading_weka/)
+    - Weka must be downloaded separately
 
 ### Installation
 
@@ -56,7 +57,7 @@ Optional arguments:
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (min, max, mean, all, canonical)  |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
@@ -87,7 +88,7 @@ Optional arguments:
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
 | -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (min, max, mean, all, canonical)  |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
@@ -121,7 +122,8 @@ Additionally, some extra information is required:
 
 ## Troubleshooting
 
-- If the program is unable to find the Java installation, set the `JAVA_HOME` environmental variable:
+- If the program is unable to find the Java installation, set the `JAVA_HOME` environmental variable to wherever Java is
+  installed. If this is in the conda environment, use this:
 ```bash
 export JAVA_HOME=${CONDA_PREFIX}
 ```

@@ -19,7 +19,7 @@ from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 from .weka_wrapper import eval_gene
 
 
-class Pipeline(object):
+class Pipeline:
     # TODO: add Pipeline docstrings
     class_params = {
         'PART': '-M 5 -C 0.25 -Q 1',
@@ -110,6 +110,7 @@ class Pipeline(object):
             gene_dmatrix = self.compute_gene_dmatrix(gene)
         mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
                                 expdir=self.expdir, weka_path=self.weka_path)
+        (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
         return gene, mcc_results
 
     def compute_stats(self):
@@ -121,8 +122,8 @@ class Pipeline(object):
         """
         mcc_df = self.full_results[['mean', 'std']]
         nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
-        nonzero.rename(columns={'mean': 'meanMCC'}, inplace=True)
-        nonzero['logMCC'] = np.log(nonzero.meanMCC + 1 - np.min(nonzero.meanMCC))
+        nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
+        nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
         nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
         nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
         nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
@@ -151,10 +152,10 @@ class Pipeline(object):
         Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
-        mcc_scatter(self.full_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
-        mcc_hist(self.full_results, dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
-        mcc_scatter(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
-        mcc_hist(self.nonzero_results, dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.png')
+        mcc_scatter(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
+        mcc_hist(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
+        mcc_scatter(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
+        mcc_hist(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.png')
         manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.svg')
 
     def cleanup(self):
