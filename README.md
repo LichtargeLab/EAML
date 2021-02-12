@@ -21,10 +21,14 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 
 ### Installation
 
-To install the conda environment:
+To clone the pipeline and install the conda environment:
 ```bash
-conda env create -f pyEA-ML/environment.yml
+git clone https://github.com/LichtargeLab/pyEA-ML.git
+conda env create -f ./pyEA-ML/environment.yml
+pip install -e ./pyEA-ML/
 ```
+
+EA-ML can also be installed without editable mode, but any changes pulled later won't be automatically included.
 
 ## Usage
 
