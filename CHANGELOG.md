@@ -1,4 +1,8 @@
-# 1.0.0 (2021-02-10)
+# 1.0.1 (2021-02-12)
+
+- Fixed bug with returning of invalid MCC scores due to a zero denominator
+
+# 1.0.0 (2021-02-12)
 
 - Removed dependency on `python-weka-wrapper3` package
   - This wrapper and how it implemented the JVM for Weka caused incompatibilities with multiprocessing, so we originally
