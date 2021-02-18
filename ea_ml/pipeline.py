@@ -125,7 +125,7 @@ class Pipeline:
         nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
         nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
         nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
-        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2
+        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore))
         nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
         return nonzero
 

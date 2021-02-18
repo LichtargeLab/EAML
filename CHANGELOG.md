@@ -1,3 +1,7 @@
+# 1.0.2 (2021-02-18)
+
+- Switched to one-sided survival function for p-value (was unclear how to interpret significant scores at bottom of ranked list)
+
 # 1.0.1 (2021-02-12)
 
 - Fixed bug with returning of invalid MCC scores due to a zero denominator
