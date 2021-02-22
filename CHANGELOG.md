@@ -1,3 +1,8 @@
+# 1.0.3 (2021-02-22)
+
+- Replaced HDF writing for output of design matrices with directory of CSV files (one file per gene)
+  - IO with HDF slows down dramatically after many genes are processed, which caused a bottleneck in the pipeline
+
 # 1.0.2 (2021-02-18)
 
 - Switched to one-sided survival function for p-value (was unclear how to interpret significant scores at bottom of ranked list)

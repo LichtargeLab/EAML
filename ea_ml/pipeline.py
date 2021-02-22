@@ -11,7 +11,6 @@ from joblib import delayed, Parallel
 from pkg_resources import resource_filename
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
-from tables.exceptions import HDF5ExtError
 from tqdm import tqdm
 
 from .vcf import parse_gene
@@ -84,13 +83,8 @@ class Pipeline:
         dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
         if self.write_data:
-            written = False
-            while written is False:
-                try:
-                    dmatrix.to_hdf(self.expdir / 'dmatrices.h5', key=gene, complevel=5, complib='zlib', format='fixed')
-                    written = True
-                except HDF5ExtError:
-                    pass
+            dmatrix_dir = self.expdir / 'dmatrices'
+            dmatrix.to_csv(dmatrix_dir / f'{gene}.csv')
         return dmatrix
 
     def eval_gene(self, gene):
@@ -103,9 +97,8 @@ class Pipeline:
         Returns:
             dict(float): Mapping of classifier to MCC from cross validation
         """
-        if self.expdir.suffix == '.h5':
-            hdf_fn = self.expdir / 'dmatrices.h5'
-            gene_dmatrix = pd.read_hdf(hdf_fn, key=gene)
+        if self.data_fn.is_dir():
+            gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
         else:
             gene_dmatrix = self.compute_gene_dmatrix(gene)
         mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
