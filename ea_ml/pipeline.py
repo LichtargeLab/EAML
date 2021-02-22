@@ -84,6 +84,7 @@ class Pipeline:
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
         if self.write_data:
             dmatrix_dir = self.expdir / 'dmatrices'
+            dmatrix_dir.mkdir(exist_ok=True)
             dmatrix.to_csv(dmatrix_dir / f'{gene}.csv')
         return dmatrix
 
