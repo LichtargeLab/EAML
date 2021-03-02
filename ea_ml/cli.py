@@ -20,7 +20,7 @@ def main_args(parser):
     parser.add_argument('-s', '--seed', type=int, default=0, help='random seed for generating KFold samples')
     parser.add_argument('-k', '--kfolds', type=int, default=10, help='number of folds for cross-validation')
     parser.add_argument('-X', '--include-X', action='store_true', help='includes X chromosome in analysis')
-    parser.add_argument('--parse-EA', default='all', choices=('all', 'max', 'mean', 'canonical'),
+    parser.add_argument('--parse-EA', default='canonical', choices=('all', 'max', 'mean', 'canonical'),
                         help='how to parse EA scores from different transcripts')
     parser.add_argument('--max-af', type=float, default=1, help='maximum allele frequency cutoff')
     parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
@@ -32,7 +32,8 @@ def main_args(parser):
 # noinspection PyTypeChecker
 def main():
     """Process command-line arguments and run the program."""
-    parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION)
+    parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION,
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', '--version', action='version', version=VERSION)
     subs = parser.add_subparsers(dest='command', metavar="<command>")
 
