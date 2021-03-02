@@ -1,3 +1,8 @@
+# 1.0.3 (2021-03-02)
+
+- Added defaults to help message
+- Switched default EA parsing option to "canonical"
+
 # 1.0.2 (2021-02-22)
 
 - Switched to one-sided survival function for p-value (was unclear how to interpret significant scores at bottom of ranked list)
