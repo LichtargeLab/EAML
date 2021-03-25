@@ -1,3 +1,7 @@
+# 1.0.4 (2021-03-24)
+
+- Reverted back to two-sided survival function for p-value
+
 # 1.0.3 (2021-03-02)
 
 - Added defaults to help message
