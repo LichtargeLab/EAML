@@ -26,7 +26,7 @@ def main_args(parser):
     parser.add_argument('--min-af', type=float, default=0, help='minimum allele frequency cutoff')
     parser.add_argument('--af-field', help='name of INFO field with AF values', default='AF')
     parser.add_argument('--cpus', type=int, default=1, help='number of CPUs to use for multiprocessing')
-    parser.add_argument('-w', '--weka-path', default='/opt/weka', help='path to Weka install directory')
+    parser.add_argument('-w', '--weka-path', default='~/weka', help='path to Weka install directory')
 
 
 # noinspection PyTypeChecker

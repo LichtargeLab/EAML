@@ -3,7 +3,7 @@ from pathlib import Path
 from subprocess import run, DEVNULL, PIPE
 
 
-def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
+def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111):
     """
     Wrapper that calls Weka JVM as subprocess
 
@@ -18,7 +18,7 @@ def call_weka(clf, clf_params, arff_fn, weka_path='/opt/weka', cv=10, seed=111):
     Returns:
         float: mean MCC score from cross-validation
     """
-    weka_jar = Path(weka_path) / 'weka.jar'
+    weka_jar = Path(weka_path).expanduser().resolve() / 'weka.jar'
     weka_call = f'java -Xmx1g -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
     weka_out = run(weka_call, shell=True, stderr=DEVNULL, stdout=PIPE, text=True)
     return parse_weka_output(weka_out.stdout)
@@ -49,7 +49,7 @@ def parse_weka_output(stdout):
             return score
 
 
-def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='/opt/weka'):
+def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka'):
     """
     Evaluate gene's classification performance across all Pipeline classifiers
 
