@@ -7,7 +7,7 @@ dependencies:
   - joblib
   - matplotlib>=3.1.1
   - numpy>=1.16.2
-  - openjdk>=8.0.265
+  - openjdk>=8.0.0
   - pandas>=0.24.1
   - pip>=20.0.2
   - pysam>=0.15.2

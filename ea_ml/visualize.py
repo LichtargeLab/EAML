@@ -69,17 +69,16 @@ def manhattan_plot(mcc_df, reference, dpi=300):
 
     Note: points close together may have overlapping labels (can be modified in Illustrator/Inkscape)
     """
-    reference = reference[~reference.index.duplicated()].loc[mcc_df.index]
-    reference['chrom'] = reference['chrom'].str.strip('chr').astype(int)
-    reference.sort_values(['chrom', 'cdsStart'], inplace=True)
+    reference = reference.loc[mcc_df.index]
+    reference.sort_values(['Chromosome', 'Start'], inplace=True)
     reference['pos'] = range(len(reference))
     fdr_cutoff = mcc_df.loc[mcc_df.qvalue <= 0.1, 'pvalue'].max()
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
     colors = ['black', 'grey']
     ticks = []
-    for i, chrom in enumerate(np.sort(reference.chrom.unique())):
-        chr_df = reference.loc[reference.chrom == chrom]
+    for i, chrom in enumerate(np.sort(reference.Chromosome.unique())):
+        chr_df = reference.loc[reference.Chromosome == chrom]
         xmin = chr_df.pos.min() + (300 * i)
         xmax = chr_df.pos.max() + (300 * i)
         ticks.append((xmin + xmax) / 2)
@@ -104,7 +103,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     ax.set_xlabel('Chromosome', fontsize=16)
     ax.set_ylabel(r'$-log_{10}$(p-value)', fontsize=16)
     ax.set_xticks(ticks)
-    ax.set_xticklabels([chrom for chrom in reference.chrom.unique()])
+    ax.set_xticklabels([chrom for chrom in reference.Chromosome.unique()])
     ax.tick_params(labelsize=14)
     ax.tick_params(axis='x', labelrotation=45)
     ax.set_ylim(0, -np.log10(mcc_df.pvalue.min()) + 1)

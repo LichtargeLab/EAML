@@ -7,14 +7,14 @@ import pandas as pd
 from pysam import VariantFile
 
 
-def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, af_field='AF', EA_parser='all'):
+def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
     """
     Parse EA scores and compute pEA design matrix for a given gene
 
     Args:
         vcf_fn (Path-like): Filepath to VCF
         gene (str): HGSC gene symbol
-        gene_reference (DataFrame/Series): Reference information for given gene's transcripts
+        gene_ref (DataFrame/Series): Reference information for given gene's transcripts
         samples (list): sample IDs
         min_af (float): Minimum allele frequency for variants
         max_af (float): Maximum allele frequency for variants
@@ -28,17 +28,10 @@ def parse_gene(vcf_fn, gene, gene_reference, samples, min_af=None, max_af=None, 
     ft_cutoffs = list(product((1, 2), (0, 30, 70)))
     vcf = VariantFile(vcf_fn)
     vcf.subset_samples(samples)
-    if type(gene_reference) == pd.DataFrame:
-        contig = gene_reference['chrom'].iloc[0].strip('chr')
-    else:
-        contig = gene_reference['chrom'].strip('chr')
-    cds_start = gene_reference['cdsStart'].min()
-    cds_end = gene_reference['cdsEnd'].max()
-    canon_nm = get_canon_nm(gene_reference)
     dmatrix = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=feature_names)
 
-    for rec in fetch_variants(vcf, contig=contig, start=cds_start, stop=cds_end):
-        ea = refactor_EA(rec.info['EA'], rec.info['NM'], canon_nm, EA_parser=EA_parser)
+    for rec in fetch_variants(vcf, contig=gene_ref.Chromosome, start=gene_ref.Start, stop=gene_ref.End):
+        ea = refactor_EA(rec.info['EA'], rec.info['NM'], gene_ref.Canonical, EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
             gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
@@ -159,7 +152,7 @@ def split_genes(rec):
         yield var
 
 
-def refactor_EA(EA, nm_ids, canon_nm, EA_parser='all'):
+def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
     """
     Parse EA scores for a given variant
 

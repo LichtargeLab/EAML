@@ -33,7 +33,7 @@ class Pipeline:
     }
 
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
-                 weka_path='/opt/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
+                 weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
                  parse_EA='all'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
@@ -119,7 +119,7 @@ class Pipeline:
         nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
         nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
         nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
-        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore))
+        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2  # two-sided test
         nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
         return nonzero
 
@@ -169,12 +169,12 @@ def load_reference(reference, include_X=False):
         DataFrame: DataFrame with chromosome and position information for each annotated transcript
     """
     if reference == 'hg19':
-        reference_fn = resource_filename('ea_ml', 'data/hg19-refGene.protein-coding.txt')
+        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg19.txt')
     elif reference == 'hg38':
-        reference_fn = resource_filename('ea_ml', 'data/hg38-refGene.protein-coding.txt')
+        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.txt')
     else:
         reference_fn = reference
-    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='name2')
+    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='Gene')
     if include_X is False:
-        reference_df = reference_df[reference_df.chrom != 'chrX']
+        reference_df = reference_df[reference_df.Chromosome != 'X']
     return reference_df
