@@ -71,11 +71,11 @@ def run_program(parser, namespace):
     kwargs = vars(namespace)
 
     if kwargs.pop('command') == 'run':
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets'))
+        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets')]
         pipeline = Pipeline(*args, **kwargs)
         pipeline.run()
     elif kwargs.pop('command') == 'permute':
-        args = (kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions'))
+        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions')]
         run_permutations(*args, **kwargs)
     else:
         parser.print_help()
