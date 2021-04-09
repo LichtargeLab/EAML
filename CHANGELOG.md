@@ -1,6 +1,9 @@
-# 1.0.4 (2021-03-24)
+# 1.0.4 (2021-04-09)
 
 - Reverted back to two-sided survival function for p-value
+- Changed canonical transcript criteria:
+  1) Longest CDS
+  2) Smallest NM ID number
 
 # 1.0.3 (2021-03-02)
 

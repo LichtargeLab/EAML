@@ -169,12 +169,12 @@ def load_reference(reference, include_X=False):
         DataFrame: DataFrame with chromosome and position information for each annotated transcript
     """
     if reference == 'hg19':
-        reference_fn = resource_filename('ea_ml', 'data/hg19-refGene.protein-coding.txt')
+        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg19.txt')
     elif reference == 'hg38':
-        reference_fn = resource_filename('ea_ml', 'data/hg38-refGene.protein-coding.txt')
+        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.txt')
     else:
         reference_fn = reference
-    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='name2')
+    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='Gene')
     if include_X is False:
-        reference_df = reference_df[reference_df.chrom != 'chrX']
+        reference_df = reference_df[reference_df.Chromosome != 'X']
     return reference_df
