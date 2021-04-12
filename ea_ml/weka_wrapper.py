@@ -3,7 +3,7 @@ from pathlib import Path
 from subprocess import run, DEVNULL, PIPE
 
 
-def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111):
+def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111, memory='Xmx2g'):
     """
     Wrapper that calls Weka JVM as subprocess
 
@@ -14,12 +14,13 @@ def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111):
         weka_path (Path-like): Filepath to Weka directory
         cv (int): Number of folds for cross-validation
         seed (int): Random seed
+        memory (str): Memory requirement for JVM
 
     Returns:
         float: mean MCC score from cross-validation
     """
     weka_jar = Path(weka_path).expanduser().resolve() / 'weka.jar'
-    weka_call = f'java -Xmx1g -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
+    weka_call = f'java -{memory} -cp {weka_jar} weka.Run .{clf} {clf_params} -t {arff_fn} -v -o -x {cv} -s {seed}'
     weka_out = run(weka_call, shell=True, stderr=DEVNULL, stdout=PIPE, text=True)
     return parse_weka_output(weka_out.stdout)
 
@@ -49,7 +50,7 @@ def parse_weka_output(stdout):
             return score
 
 
-def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka'):
+def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka', memory='Xmx2g'):
     """
     Evaluate gene's classification performance across all Pipeline classifiers
 
@@ -62,6 +63,7 @@ def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.
         cv (int): Number of folds for cross-validation
         expdir (Path-like): Filepath to experiment directory
         weka_path (Path-like): Filepath to Weka directory
+        memory (str): Memory requirement for JVM
 
     Returns:
         dict: Mapping of classifier to mean MCC score
@@ -72,7 +74,7 @@ def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.
     arff_fn = expdir / 'tmp' / f'{gene}.arff'
     write_arff(dmatrix, targets, arff_fn)
     for clf, params in clf_calls.items():
-        mcc_results[clf] = call_weka(clf, params, arff_fn, weka_path=weka_path, cv=cv, seed=seed)
+        mcc_results[clf] = call_weka(clf, params, arff_fn, weka_path=weka_path, cv=cv, seed=seed, memory=memory)
     return mcc_results
 
 

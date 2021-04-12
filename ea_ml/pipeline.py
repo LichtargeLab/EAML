@@ -34,7 +34,7 @@ class Pipeline:
 
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='all'):
+                 parse_EA='all', memory='Xmx2g'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -45,6 +45,7 @@ class Pipeline:
         self.kfolds = kfolds
         self.seed = seed
         self.weka_path = weka_path
+        self.weka_mem = memory
         self.min_af = min_af
         self.max_af = max_af
         self.af_field = af_field
@@ -103,7 +104,7 @@ class Pipeline:
         else:
             gene_dmatrix = self.compute_gene_dmatrix(gene)
         mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
-                                expdir=self.expdir, weka_path=self.weka_path)
+                                expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
         (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
         return gene, mcc_results
 
