@@ -87,7 +87,13 @@ def manhattan_plot(mcc_df, reference, dpi=300):
 
     def _label_point(g):
         gene_ref = reference.loc[g]
-        x = gene_ref.pos + (gene_ref.chrom - 1) * 300
+        if gene_ref.Chromosome == 'X':
+            chr_pos = 23
+        elif gene_ref.Chromosome == 'Y':
+            chr_pos = 24
+        else:
+            chr_pos = int(gene_ref.Chromosome)
+        x = gene_ref.pos + (chr_pos - 1) * 300
         y = -np.log10(mcc_df.loc[gene, 'pvalue'])
         ax.annotate(str(g), (x, y), bbox=bbox_props, textcoords='offset points', xytext=(0, 10), ha='center',
                     fontsize=8)

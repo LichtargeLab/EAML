@@ -72,6 +72,7 @@ Optional arguments:
 | --write-data         | \<bool\>  | keeps design matrix after analysis completes                                        |
 | --dpi                | \<int\>   | DPI for output figures                                                              |
 | -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
+| --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
@@ -104,6 +105,7 @@ Optional arguments:
 | --restart            | \<int\>   | restart permutations from this number                                               |
 | -c, --clean          | \<bool\>  | clean design matrix and permutation files                                           |
 | -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
+| --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 
 
 ## Input Requirements

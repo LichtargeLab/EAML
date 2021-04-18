@@ -1,3 +1,8 @@
+# 1.0.5 (2021-04-12)
+
+- Fixed Manhattan plot function with new reference file format
+- Increased default JVM memory and added optional argument in case 2G is still not enough
+
 # 1.0.4 (2021-04-09)
 
 - Reverted back to two-sided survival function for p-value

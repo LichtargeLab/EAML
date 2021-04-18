@@ -81,7 +81,7 @@ def compute_stats(preds_fn, perm_results):
 
 def run_permutations(exp_dir, data_fn, targets_fn, preds_fn, reference='hg19', cpus=1, seed=111, kfolds=10, n_runs=100,
                      restart=0, clean=False, include_X=False, min_af=None, max_af=None, af_field='AF',
-                     weka_path='/opt/weka'):
+                     weka_path='~/weka', memory='Xmx2g'):
     """
     Run permutation experiment
 
@@ -102,6 +102,7 @@ def run_permutations(exp_dir, data_fn, targets_fn, preds_fn, reference='hg19', c
         max_af (float): Maximum allele frequency for variants
         af_field (str): Name of INFO field containing allele frequency information
         weka_path (Path-like): Filepath to Weka directory
+        memory (str): Memory argument for each Weka JVM
     """
     if restart > 0:  # restart permutation count from here
         start = restart
@@ -117,7 +118,7 @@ def run_permutations(exp_dir, data_fn, targets_fn, preds_fn, reference='hg19', c
             write_data = False
         pipeline = Pipeline(run_dir, data_fn, new_targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                             weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
-                            write_data=write_data)
+                            write_data=write_data, memory=memory)
         pipeline.run()
         if '.vcf' in data_fn.suffixes:
             data_fn = (run_dir / 'dmatrices.h5').rename(exp_dir / 'dmatrices.h5')
