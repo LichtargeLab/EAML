@@ -175,7 +175,7 @@ def load_reference(reference, include_X=False):
         reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.txt')
     else:
         reference_fn = reference
-    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='Gene')
+    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='gene')
     if include_X is False:
-        reference_df = reference_df[reference_df.Chromosome != 'X']
+        reference_df = reference_df[reference_df.chrom != 'X']
     return reference_df

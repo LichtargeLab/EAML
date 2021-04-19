@@ -1,3 +1,8 @@
+# 1.0.6 (2021-04-19)
+
+- Fixed issue with RefSeq canonical transcript set not matching transcript set used by ANNOVAR version
+  - For simplicity, we reverted to our original "canonical" criteria, defined by the smallest NM ID number
+
 # 1.0.5 (2021-04-12)
 
 - Fixed Manhattan plot function with new reference file format

@@ -15,7 +15,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 - OS X or Linux
 - Anaconda3
 - Python 3.7+
-- OpenJDK 8.0.265+
+- OpenJDK 8.0.0+
 - [Weka 3.8.0+](https://waikato.github.io/weka-wiki/downloading_weka/)
     - Weka must be downloaded separately
 
@@ -52,7 +52,7 @@ Required arguments (note: don't include the argument name in the command line):
 
 | argument       | type          | description                                              |
 |----------------|---------------|----------------------------------------------------------|
-| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| data           | \<file\>      | VCF or directory of precomputed design matrices          |
 | targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
 
 Optional arguments:
@@ -83,7 +83,7 @@ Required arguments:
 
 | argument       | type          | description                                              |
 |----------------|---------------|----------------------------------------------------------|
-| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| data           | \<file\>      | VCF or directory of precomputed design matrices          |
 | targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
 | predictions    | \<file\>      | EA-ML results                                            |
 
