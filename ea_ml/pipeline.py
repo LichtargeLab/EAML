@@ -83,7 +83,7 @@ class Pipeline:
         gene_reference = self.reference.loc[gene]
         dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
-        if self.write_data:
+        if self.write_data and (dmatrix != 0).any().any():
             dmatrix_dir = self.expdir / 'dmatrices'
             dmatrix_dir.mkdir(exist_ok=True)
             dmatrix.to_csv(dmatrix_dir / f'{gene}.csv')
@@ -103,10 +103,11 @@ class Pipeline:
             gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
         else:
             gene_dmatrix = self.compute_gene_dmatrix(gene)
-        mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
-                                expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
-        (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
-        return gene, mcc_results
+        if (gene_dmatrix != 0).any().any():
+            mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
+                                    expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
+            (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
+            return gene, mcc_results
 
     def compute_stats(self):
         """
