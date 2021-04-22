@@ -115,7 +115,9 @@ In order to use this pipeline properly, it requires 3 input files:
 1. A VCF file containing all cohort variants annotated with gene information (from ANNOVAR), EA scores, and genotype
    information for each cohort sample.
 2. A comma-delimited list of samples along with their disease status (0 or 1).
-3. A RefGene-formatted reference file of genes (hg19 and hg38 are included in package)
+3. A RefSeq-formatted reference file of genes (hg19 and hg38 are included in package)
+
+*Note: Current package reference files are derived from those used in the 2013-05-09 version of ANNOVAR*
 
 The VCF file should follow proper formatting as described [here](<https://samtools.github.io/hts-specs/VCFv4.2.pdf>).
 

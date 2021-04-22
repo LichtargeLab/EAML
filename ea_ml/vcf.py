@@ -73,24 +73,6 @@ def pEA(dmatrix, ea, gts, cutoff, ft_name):
     dmatrix[ft_name] *= (1 - (ea * mask) / 100) ** gts
 
 
-def get_canon_nm(gene_reference):
-    """
-    Parse "canonical" transcript based on smallest NM ID number
-
-    Args:
-        gene_reference (DataFrame/Series): Reference information for given gene's transcripts
-
-    Returns:
-        str: Canonical transcript NM ID
-    """
-    if type(gene_reference) == pd.DataFrame:
-        nm_numbers = [int(nm.strip('NM_')) for nm in list(gene_reference['name'])]
-        minpos = np.argmin(nm_numbers)
-        return gene_reference['name'].iloc[minpos]
-    else:
-        return gene_reference['name']
-
-
 def af_check(rec, af_field='AF', max_af=None, min_af=None):
     """
     Check if variant allele frequency passes filters
