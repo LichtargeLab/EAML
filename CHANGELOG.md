@@ -1,4 +1,4 @@
-# 1.0.6 (2021-04-19)
+# 1.0.6 (2021-04-23)
 
 - Fixed issue with RefSeq canonical transcript set not matching transcript set used by ANNOVAR version
 - Fixed issue with hg19 RefSeq file using hg38 coordinates

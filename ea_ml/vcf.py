@@ -30,7 +30,7 @@ def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_fie
     vcf.subset_samples(samples)
     dmatrix = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=feature_names)
 
-    for rec in fetch_variants(vcf, contig=gene_ref.chrom, start=gene_ref.start, stop=gene_ref.end):
+    for rec in fetch_variants(vcf, contig=str(gene_ref.chrom), start=gene_ref.start, stop=gene_ref.end):
         ea = refactor_EA(rec.info['EA'], rec.info['NM'], gene_ref.canonical, EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
