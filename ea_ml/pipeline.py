@@ -61,7 +61,7 @@ class Pipeline:
         gene_results = Parallel(n_jobs=self.cpus)(
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
-        self.raw_results = gene_results
+        self.raw_results = [result for result in gene_results if result]
         self.report_results()
         print('\nGene scoring completed. Analysis summary in experiment directory.')
         self.visualize()
@@ -83,7 +83,7 @@ class Pipeline:
         gene_reference = self.reference.loc[gene]
         dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
                              max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
-        if self.write_data and (dmatrix != 0).any().any():
+        if self.write_data:
             dmatrix_dir = self.expdir / 'dmatrices'
             dmatrix_dir.mkdir(exist_ok=True)
             dmatrix.to_csv(dmatrix_dir / f'{gene}.csv')
@@ -108,6 +108,8 @@ class Pipeline:
                                     expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
             (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
             return gene, mcc_results
+        else:
+            return None
 
     def compute_stats(self):
         """
