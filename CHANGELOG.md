@@ -1,3 +1,9 @@
+# 1.0.6 (2021-04-23)
+
+- Fixed issue with RefSeq canonical transcript set not matching transcript set used by ANNOVAR version
+- Fixed issue with hg19 RefSeq file using hg38 coordinates
+- Will now skip evaluation of genes with all-zero design matrices (in other words, no missense/nonsense mutations)
+
 # 1.0.5 (2021-04-12)
 
 - Fixed Manhattan plot function with new reference file format

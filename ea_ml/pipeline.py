@@ -61,7 +61,7 @@ class Pipeline:
         gene_results = Parallel(n_jobs=self.cpus)(
             delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
         )
-        self.raw_results = gene_results
+        self.raw_results = [result for result in gene_results if result]
         self.report_results()
         print('\nGene scoring completed. Analysis summary in experiment directory.')
         self.visualize()
@@ -103,10 +103,13 @@ class Pipeline:
             gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
         else:
             gene_dmatrix = self.compute_gene_dmatrix(gene)
-        mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
-                                expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
-        (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
-        return gene, mcc_results
+        if (gene_dmatrix != 0).any().any():
+            mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
+                                    expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
+            (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
+            return gene, mcc_results
+        else:
+            return None
 
     def compute_stats(self):
         """
@@ -175,7 +178,7 @@ def load_reference(reference, include_X=False):
         reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.txt')
     else:
         reference_fn = reference
-    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='Gene')
+    reference_df = pd.read_csv(reference_fn, sep='\t', index_col='gene', dtype={'chrom': str})
     if include_X is False:
-        reference_df = reference_df[reference_df.Chromosome != 'X']
+        reference_df = reference_df[reference_df.chrom != 'X']
     return reference_df

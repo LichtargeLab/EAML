@@ -15,7 +15,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 - OS X or Linux
 - Anaconda3
 - Python 3.7+
-- OpenJDK 8.0.265+
+- OpenJDK 8.0.0+
 - [Weka 3.8.0+](https://waikato.github.io/weka-wiki/downloading_weka/)
     - Weka must be downloaded separately
 
@@ -52,7 +52,7 @@ Required arguments (note: don't include the argument name in the command line):
 
 | argument       | type          | description                                              |
 |----------------|---------------|----------------------------------------------------------|
-| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| data           | \<file\>      | VCF or directory of precomputed design matrices          |
 | targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
 
 Optional arguments:
@@ -83,7 +83,7 @@ Required arguments:
 
 | argument       | type          | description                                              |
 |----------------|---------------|----------------------------------------------------------|
-| data           | \<file\>      | VCF or HDF file of DataFrames with gene names as keys    |
+| data           | \<file\>      | VCF or directory of precomputed design matrices          |
 | targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
 | predictions    | \<file\>      | EA-ML results                                            |
 
@@ -115,7 +115,9 @@ In order to use this pipeline properly, it requires 3 input files:
 1. A VCF file containing all cohort variants annotated with gene information (from ANNOVAR), EA scores, and genotype
    information for each cohort sample.
 2. A comma-delimited list of samples along with their disease status (0 or 1).
-3. A RefGene-formatted reference file of genes (hg19 and hg38 are included in package)
+3. A RefSeq-formatted reference file of genes (hg19 and hg38 are included in package)
+
+*Note: Current package reference files are derived from those used in the 2013-05-09 version of ANNOVAR*
 
 The VCF file should follow proper formatting as described [here](<https://samtools.github.io/hts-specs/VCFv4.2.pdf>).
 
