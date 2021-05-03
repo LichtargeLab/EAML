@@ -70,6 +70,9 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     Note: points close together may have overlapping labels (can be modified in Illustrator/Inkscape)
     """
     reference = reference.loc[mcc_df.index]
+    reference.loc[reference.chrom == 'X'] = 23
+    reference.loc[reference.chrom == 'Y'] = 24
+    reference = reference.astype({'chrom': int})
     reference.sort_values(['chrom', 'start'], inplace=True)
     reference['pos'] = range(len(reference))
     fdr_cutoff = mcc_df.loc[mcc_df.qvalue <= 0.1, 'pvalue'].max()
@@ -77,7 +80,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     fig, ax = plt.subplots(figsize=(8, 6), dpi=dpi)
     colors = ['black', 'grey']
     ticks = []
-    for i, chrom in enumerate(np.sort(reference.chrom.unique())):
+    for i, chrom in enumerate(reference.chrom.unique()):
         chr_df = reference.loc[reference.chrom == chrom]
         xmin = chr_df.pos.min() + (300 * i)
         xmax = chr_df.pos.max() + (300 * i)
@@ -87,13 +90,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
 
     def _label_point(g):
         gene_ref = reference.loc[g]
-        if gene_ref.chrom == 'X':
-            chr_pos = 23
-        elif gene_ref.chrom == 'Y':
-            chr_pos = 24
-        else:
-            chr_pos = int(gene_ref.chrom)
-        x = gene_ref.pos + (chr_pos - 1) * 300
+        x = gene_ref.pos + (gene_ref.chrom - 1) * 300
         y = -np.log10(mcc_df.loc[gene, 'pvalue'])
         ax.annotate(str(g), (x, y), bbox=bbox_props, textcoords='offset points', xytext=(0, 10), ha='center',
                     fontsize=8)
@@ -109,7 +106,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     ax.set_xlabel('Chromosome', fontsize=16)
     ax.set_ylabel(r'$-log_{10}$(p-value)', fontsize=16)
     ax.set_xticks(ticks)
-    ax.set_xticklabels([chrom for chrom in reference.chrom.unique()])
+    ax.set_xticklabels(['X' if chrom == 23 else 'Y' if chrom == 24 else str(chrom) for chrom in reference.chrom.unique()])
     ax.tick_params(labelsize=14)
     ax.tick_params(axis='x', labelrotation=45)
     ax.set_ylim(0, -np.log10(mcc_df.pvalue.min()) + 1)
