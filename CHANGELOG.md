@@ -1,3 +1,7 @@
+# 1.0.7 (2021-05-03)
+
+- Fixed sorting of chromosomes in Manhattan plot
+
 # 1.0.6 (2021-04-23)
 
 - Fixed issue with RefSeq canonical transcript set not matching transcript set used by ANNOVAR version
