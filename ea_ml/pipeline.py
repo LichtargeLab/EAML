@@ -180,5 +180,6 @@ def load_reference(reference, include_X=False):
         reference_fn = reference
     reference_df = pd.read_csv(reference_fn, sep='\t', index_col='gene', dtype={'chrom': str})
     if include_X is False:
-        reference_df = reference_df[reference_df.chrom != 'X']
+        chroms = [str(chrom) for chrom in range(1, 23)]
+        reference_df = reference_df[reference_df.chrom.isin(chroms)]
     return reference_df

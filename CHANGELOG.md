@@ -1,3 +1,7 @@
+# 1.0.8 (2021-05-06)
+
+- Corrected autosomal analysis (the default mode) to also ignore Y chromosome genes
+
 # 1.0.7 (2021-05-03)
 
 - Fixed sorting of chromosomes in Manhattan plot
