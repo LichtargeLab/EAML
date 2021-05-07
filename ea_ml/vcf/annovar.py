@@ -1,10 +1,13 @@
 #!/usr/bin/env python
+"""Module for parsing VCFs that have been annotated by a custom ANNOVAR & EA annotation pipeline"""
 import re
 from itertools import product
 
 import numpy as np
 import pandas as pd
 from pysam import VariantFile
+
+from vcf.utils import pEA, af_check, convert_zygo
 
 
 def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
@@ -66,36 +69,6 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
                 yield var
         else:
             yield rec
-
-
-def pEA(dmatrix, ea, gts, cutoff, ft_name):
-    mask = (ea >= cutoff[1]) & (gts >= cutoff[0])
-    dmatrix[ft_name] *= (1 - (ea * mask) / 100) ** gts
-
-
-def af_check(rec, af_field='AF', max_af=None, min_af=None):
-    """
-    Check if variant allele frequency passes filters
-
-    Args:
-        rec (VariantRecord)
-        af_field (str): Name of INFO field containing allele frequency information
-        max_af (float): Maximum allele frequency for variant
-        min_af (float): Minimum allele frequency for variant
-
-    Returns:
-        bool: True of AF passes filters, otherwise False
-    """
-    if max_af is None and min_af is None:
-        return True
-    elif max_af is None:
-        max_af = 1
-    elif min_af is None:
-        min_af = 0
-    af = rec.info[af_field]
-    if type(af) == tuple:
-        af = af[0]
-    return min_af < af < max_af
 
 
 def split_genes(rec):
@@ -167,25 +140,6 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
             return np.nanmax(newEA)
         else:
             return newEA
-
-
-def convert_zygo(genotype):
-    """
-    Convert a genotype tuple to a zygosity integer
-
-    Args:
-        genotype (tuple): The genotype of a variant for a sample
-
-    Returns:
-        int: The zygosity of the variant (0/1/2)
-    """
-    if genotype in [(1, 0), (0, 1), ('.', 1), (1, '.')]:
-        zygo = 1
-    elif genotype == (1, 1):
-        zygo = 2
-    else:
-        zygo = 0
-    return zygo
 
 
 def EA_to_float(ea):
