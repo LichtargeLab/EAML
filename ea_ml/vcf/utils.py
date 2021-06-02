@@ -1,4 +1,29 @@
 #!/usr/bin/env python
+import numpy as np
+
+
+def validate_EA(ea):
+    """
+    Checks for valid EA score
+
+    Args:
+        ea (str/float/None): EA score as string
+
+    Returns:
+        float: EA score between 0-100 if valid, otherwise returns NaN
+    """
+    try:
+        ea = float(ea)
+    except ValueError:
+        if type(ea) == str and (ea == 'fs-indel' or 'STOP' in ea):
+            ea = 100
+        else:
+            ea = np.nan
+    except TypeError:
+        ea = np.nan
+    return ea
+
+
 def pEA(dmatrix, ea, gts, cutoff, ft_name):
     mask = (ea >= cutoff[1]) & (gts >= cutoff[0])
     dmatrix[ft_name] *= (1 - (ea * mask) / 100) ** gts

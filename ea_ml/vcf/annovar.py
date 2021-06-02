@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 """Module for parsing VCFs that have been annotated by a custom ANNOVAR & EA annotation pipeline"""
-import re
 from itertools import product
 
 import numpy as np
 import pandas as pd
 from pysam import VariantFile
 
-from vcf.utils import pEA, af_check, convert_zygo
+from vcf.utils import pEA, af_check, convert_zygo, validate_EA
 
 
 def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
@@ -34,7 +33,7 @@ def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_fie
     dmatrix = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=feature_names)
 
     for rec in fetch_variants(vcf, contig=str(gene_ref.chrom), start=gene_ref.start, stop=gene_ref.end):
-        ea = refactor_EA(rec.info['EA'], rec.info['NM'], gene_ref.canonical, EA_parser=EA_parser)
+        ea = fetch_EA(rec.info['EA'], rec.info['NM'], gene_ref.canonical, EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
             gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
@@ -107,7 +106,7 @@ def split_genes(rec):
         yield var
 
 
-def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
+def fetch_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
     """
     Parse EA scores for a given variant
 
@@ -120,18 +119,17 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
     Returns:
         float/list: Valid EA scores, refactored as floats
 
-    Note: EA must be string type, otherwise regex search will raise an error.
+    Note: EA must be string type
     """
-    newEA = []
-    # Note: will always return list
     if EA_parser == 'canonical' and canon_nm in nm_ids:
         if len(EA) > 1:
-            return EA_to_float(EA[nm_ids.index(canon_nm)])
+            return validate_EA(EA[nm_ids.index(canon_nm)])
         else:
-            return EA_to_float(EA[0])
+            return validate_EA(EA[0])
     else:
+        newEA = []
         for score in EA:
-            newEA.append(EA_to_float(score))
+            newEA.append(validate_EA(score))
         if np.isnan(newEA).all():
             return np.nan
         elif EA_parser == 'mean':
@@ -140,23 +138,3 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
             return np.nanmax(newEA)
         else:
             return newEA
-
-
-def EA_to_float(ea):
-    """
-    Converts EA score to float
-
-    Args:
-        ea (str): EA score as string
-
-    Returns:
-        float: EA score between 0-100 if valid, otherwise returns 0
-    """
-    try:
-        score = float(ea)
-    except (ValueError, TypeError):
-        if re.search(r'fs-indel', ea) or re.search(r'STOP', ea):
-            score = 100
-        else:
-            score = np.nan
-    return score
