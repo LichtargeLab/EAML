@@ -60,8 +60,9 @@ Optional arguments:
 | argument             | type      | description                                                                         |
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
-| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38, GRCh37, GRCh38)                                       |
+| -a, --annotation     | \<str\>   | Variant annotation pipeline used (ANNOVAR, VEP)                                     |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)       |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |

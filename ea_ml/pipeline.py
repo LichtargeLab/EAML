@@ -34,7 +34,7 @@ class Pipeline:
 
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='all', memory='Xmx2g'):
+                 parse_EA='all', memory='Xmx2g', annotation='ANNOVAR'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -42,6 +42,7 @@ class Pipeline:
         self.reference = load_reference(reference, include_X=include_X)
 
         # config arguments
+        self.annotation = annotation
         self.kfolds = kfolds
         self.seed = seed
         self.weka_path = weka_path
@@ -81,8 +82,12 @@ class Pipeline:
             DataFrame: EA design matrix for gene-of-interest
         """
         gene_reference = self.reference.loc[gene]
-        dmatrix = parse_gene(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
-                             max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
+        if self.annotation == 'ANNOVAR':
+            dmatrix = parse_ANNOVAR(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
+                                    max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
+        else:
+            dmatrix = parse_VEP(self.data_fn, gene, gene_reference, list(self.targets.index), min_af=self.min_af,
+                                max_af=self.max_af, af_field=self.af_field, EA_parser=self.EA_parser)
         if self.write_data:
             dmatrix_dir = self.expdir / 'dmatrices'
             dmatrix_dir.mkdir(exist_ok=True)
