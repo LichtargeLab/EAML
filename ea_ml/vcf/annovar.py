@@ -9,9 +9,9 @@ from pysam import VariantFile
 from vcf.utils import pEA, af_check, convert_zygo, validate_EA
 
 
-def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
+def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
     """
-    Parse EA scores and compute pEA design matrix for a given gene
+    Parse EA scores and compute pEA design matrix for a given gene with custom ANNOVAR annotations
 
     Args:
         vcf_fn (Path-like): Filepath to VCF

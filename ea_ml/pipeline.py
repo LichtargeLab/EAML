@@ -13,7 +13,7 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 from tqdm import tqdm
 
-from .vcf import parse_gene
+from .vcf import parse_ANNOVAR, parse_VEP
 from .visualize import mcc_hist, mcc_scatter, manhattan_plot
 from .weka import eval_gene
 
