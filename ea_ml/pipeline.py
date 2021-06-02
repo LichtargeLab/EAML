@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from .vcf import parse_gene
 from .visualize import mcc_hist, mcc_scatter, manhattan_plot
-from .weka_wrapper import eval_gene
+from .weka import eval_gene
 
 
 class Pipeline:
@@ -176,6 +176,10 @@ def load_reference(reference, include_X=False):
         reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg19.txt')
     elif reference == 'hg38':
         reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.txt')
+    elif reference == 'GRCh37':
+        reference_fn = resource_filename('ea_ml', 'data/ENSEMBL-lite_GRCh37.txt')
+    elif reference == 'GRCh38':
+        reference_fn = resource_filename('ea_ml', 'data/ENSEMBL-lite_GRCh38.txt')
     else:
         reference_fn = reference
     reference_df = pd.read_csv(reference_fn, sep='\t', index_col='gene', dtype={'chrom': str})
