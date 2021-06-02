@@ -3,7 +3,7 @@
 The Python version of the lab EA-ML pipeline.
 
 This pipeline uses an ensemble of supervised learning algorithms to score a gene's contribution to disease risk based on
-it's case/control separation ability. This is all based on a probability score (pEA) computed using EA.
+its case/control separation ability. This is all based on a probability score (pEA) computed using EA.
 
 The output is a ranked list of genes scored by the Matthew's Correlation Coefficient (MCC), effectively using
 classification accuracy as a proxy for a gene's relevance in a specified disease context.
@@ -32,7 +32,7 @@ EA-ML can also be installed without editable mode, but any changes pulled later 
 
 ## Usage
 
-It's highly recommended to run any pyEA-ML analysis inside a virtual environment, this is created from the install script.
+It is highly recommended to run any pyEA-ML analysis inside a virtual environment.
 
 See available commands:
 ```bash
