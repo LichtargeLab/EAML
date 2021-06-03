@@ -42,7 +42,7 @@ def parse_VEP(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_fiel
 
     for rec in vcf.fetch(contig=str(gene_ref.chrom), start=gene_ref.start, stop=gene_ref.end):
         all_ea = rec.info.get('EA', (None,))
-        all_ensp = rec.info.get('Ensembl_proteinid', rec.info['ENSP'][0])
+        all_ensp = rec.info.get('Ensembl_proteinid', (rec.info['ENSP'][0],))
         ea = fetch_EA(all_ea, rec.info['ENSP'][0], all_ensp, rec.info['Consequence'][0], EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if not np.isnan(ea).all() and gene == rec.info['SYMBOL'][0] and pass_af_check:
