@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pysam import VariantFile
 
-from vcf.utils import pEA, af_check, convert_zygo, validate_EA
+from .utils import pEA, af_check, convert_zygo, validate_EA
 
 
 def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
