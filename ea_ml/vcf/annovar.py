@@ -1,15 +1,17 @@
 #!/usr/bin/env python
-import re
+"""Module for parsing VCFs that have been annotated by a custom ANNOVAR & EA annotation pipeline"""
 from itertools import product
 
 import numpy as np
 import pandas as pd
 from pysam import VariantFile
 
+from .utils import pEA, af_check, convert_zygo, validate_EA
 
-def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
+
+def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
     """
-    Parse EA scores and compute pEA design matrix for a given gene
+    Parse EA scores and compute pEA design matrix for a given gene with custom ANNOVAR annotations
 
     Args:
         vcf_fn (Path-like): Filepath to VCF
@@ -31,7 +33,7 @@ def parse_gene(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_fie
     dmatrix = pd.DataFrame(np.ones((len(samples), 6)), index=samples, columns=feature_names)
 
     for rec in fetch_variants(vcf, contig=str(gene_ref.chrom), start=gene_ref.start, stop=gene_ref.end):
-        ea = refactor_EA(rec.info['EA'], rec.info['NM'], gene_ref.canonical, EA_parser=EA_parser)
+        ea = fetch_EA(rec.info['EA'], rec.info['NM'], gene_ref.canonical, EA_parser=EA_parser)
         pass_af_check = af_check(rec, af_field=af_field, max_af=max_af, min_af=min_af)
         if not np.isnan(ea).all() and gene == rec.info['gene'] and pass_af_check:
             gts = pd.Series([convert_zygo(rec.samples[sample]['GT']) for sample in samples], index=samples, dtype=int)
@@ -66,36 +68,6 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
                 yield var
         else:
             yield rec
-
-
-def pEA(dmatrix, ea, gts, cutoff, ft_name):
-    mask = (ea >= cutoff[1]) & (gts >= cutoff[0])
-    dmatrix[ft_name] *= (1 - (ea * mask) / 100) ** gts
-
-
-def af_check(rec, af_field='AF', max_af=None, min_af=None):
-    """
-    Check if variant allele frequency passes filters
-
-    Args:
-        rec (VariantRecord)
-        af_field (str): Name of INFO field containing allele frequency information
-        max_af (float): Maximum allele frequency for variant
-        min_af (float): Minimum allele frequency for variant
-
-    Returns:
-        bool: True of AF passes filters, otherwise False
-    """
-    if max_af is None and min_af is None:
-        return True
-    elif max_af is None:
-        max_af = 1
-    elif min_af is None:
-        min_af = 0
-    af = rec.info[af_field]
-    if type(af) == tuple:
-        af = af[0]
-    return min_af < af < max_af
 
 
 def split_genes(rec):
@@ -134,7 +106,7 @@ def split_genes(rec):
         yield var
 
 
-def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
+def fetch_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
     """
     Parse EA scores for a given variant
 
@@ -147,18 +119,17 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
     Returns:
         float/list: Valid EA scores, refactored as floats
 
-    Note: EA must be string type, otherwise regex search will raise an error.
+    Note: EA must be string type
     """
-    newEA = []
-    # Note: will always return list
     if EA_parser == 'canonical' and canon_nm in nm_ids:
         if len(EA) > 1:
-            return EA_to_float(EA[nm_ids.index(canon_nm)])
+            return validate_EA(EA[nm_ids.index(canon_nm)])
         else:
-            return EA_to_float(EA[0])
+            return validate_EA(EA[0])
     else:
+        newEA = []
         for score in EA:
-            newEA.append(EA_to_float(score))
+            newEA.append(validate_EA(score))
         if np.isnan(newEA).all():
             return np.nan
         elif EA_parser == 'mean':
@@ -167,42 +138,3 @@ def refactor_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
             return np.nanmax(newEA)
         else:
             return newEA
-
-
-def convert_zygo(genotype):
-    """
-    Convert a genotype tuple to a zygosity integer
-
-    Args:
-        genotype (tuple): The genotype of a variant for a sample
-
-    Returns:
-        int: The zygosity of the variant (0/1/2)
-    """
-    if genotype in [(1, 0), (0, 1), ('.', 1), (1, '.')]:
-        zygo = 1
-    elif genotype == (1, 1):
-        zygo = 2
-    else:
-        zygo = 0
-    return zygo
-
-
-def EA_to_float(ea):
-    """
-    Converts EA score to float
-
-    Args:
-        ea (str): EA score as string
-
-    Returns:
-        float: EA score between 0-100 if valid, otherwise returns 0
-    """
-    try:
-        score = float(ea)
-    except (ValueError, TypeError):
-        if re.search(r'fs-indel', ea) or re.search(r'STOP', ea):
-            score = 100
-        else:
-            score = np.nan
-    return score
