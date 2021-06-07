@@ -1,3 +1,10 @@
+# 1.1.0 (2021-06-07)
+
+- Added `vcf` module with separate parsers for custom ANNOVAR and VEP annotations
+- Added `--annotation` argument for identifying which parser to use
+- Added ENSEMBL gene reference files for GRCh37 and GRCh38
+- Renamed `weka_wrapper` module to `weka`
+
 # 1.0.8 (2021-05-06)
 
 - Corrected autosomal analysis (the default mode) to also ignore Y chromosome genes
