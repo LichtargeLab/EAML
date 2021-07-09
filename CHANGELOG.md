@@ -1,3 +1,7 @@
+# 1.1.1 (2021-07-09)
+
+- Fixed VEP parser to account for fields from VEP returning something other than a tuple
+
 # 1.1.0 (2021-06-07)
 
 - Added `vcf` module with separate parsers for custom ANNOVAR and VEP annotations
