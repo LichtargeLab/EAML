@@ -34,7 +34,7 @@ class Pipeline:
 
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='all', memory='Xmx2g', annotation='ANNOVAR'):
+                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
