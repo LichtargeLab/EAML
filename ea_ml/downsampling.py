@@ -4,20 +4,12 @@ Module for running downsampling experiments to estimate statistical power in com
 methods.
 
 Note: This can be a long-running process, depending on the dataset size.
-
-Steps:
-calculate all matrices
-for each sample size:
-    subset matrix and targets
-    run ea-ml
-
 """
 import pandas as pd
-from pathlib import Path
-import time
-from sklearn.model_selection import train_test_split
+from collections import defaultdict
+from sklearn.model_selection import StratifiedShuffleSplit
 
-from .pipeline import Pipeline
+from .pipeline import Pipeline, compute_stats
 from .weka import eval_gene
 
 
@@ -33,30 +25,52 @@ class DownsamplingPipeline(Pipeline):
         self.true_results = true_results
         self.write_data = False
 
-    def run(self):
-        start = time.time()
-        (self.expdir / 'tmp').mkdir(exist_ok=True)
-
     def eval_gene(self, gene):
         """Parse input data for a given gene and evaluate with Weka repeatedly for each sample size"""
-
-        if self.data_fn.is_dir():
-            gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
+        # first check if gene was scored by whole cohort run
+        if gene in self.true_results.index:
+            sampled_results = defaultdict(list)
+            if self.data_fn.is_dir():
+                gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
+            else:
+                gene_dmatrix = self.compute_gene_dmatrix(gene)
+            for sample_size in self.sample_sizes:
+                splits = downsample_gene(gene_dmatrix, self.targets, sample_size, n_splits=self.n_repeats)
+                for split_idx, _ in splits:
+                    sub_X = gene_dmatrix.iloc[split_idx]
+                    sub_y = self.targets.iloc[split_idx]
+                    mcc_results = eval_gene(gene, sub_X, sub_y, self.class_params, seed=self.seed, cv=self.kfolds,
+                                            expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
+                    sampled_results[sample_size].append(mcc_results)
+                    (self.expdir / f'tmp/{gene}.arff').unlink()
+            return gene, sampled_results
         else:
-            gene_dmatrix = self.compute_gene_dmatrix(gene)
-        for sample_size in self.sample_sizes:
-            sub_X, sub_y = downsample_matrix(gene_dmatrix, self.targets, sample_size)
-            mcc_results = eval_gene(gene, sub_X, sub_y, self.class_params, seed=self.seed, cv=self.kfolds,
-                                    expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
-
-
-    def compute_stats(self):
-        pass
+            return None
 
     def report_results(self):
+        # lots of nesting here, is there a better way to do this?
+        self.nonzero_results = {n: [] for n in self.sample_sizes}
+        for n in self.sample_sizes:
+            subdir = self.expdir / str(n)
+            subdir.mkdir()
+            for i in range(self.n_repeats):
+                mcc_df_dict = defaultdict(list)
+                for gene, sampled_results in self.raw_results:
+                    mcc_df_dict['gene'].append(gene)
+                    for clf, mcc in sampled_results[n][i].items():
+                        mcc_df_dict[clf].append(mcc)
+                mcc_df = pd.DataFrame(mcc_df_dict).set_index('gene')
+                clfs = mcc_df.columns
+                mcc_df['mean'] = mcc_df.mean(axis=1)
+                mcc_df['std'] = mcc_df[clfs].std(axis=1)
+                mcc_df.sort_values('mean', ascending=False, inplace=True)
+                nonzero_df = compute_stats(mcc_df)
+                self.nonzero_results[n].append(nonzero_df)
+                nonzero_df.to_csv(subdir / f'meanMCC_results.nonzero-stats.{i}.csv')
+
+    def visualize(self):
         pass
 
 
-def downsample_matrix(X, y, n):
-    sub_X, _, sub_y, _ = train_test_split(X, y, train_size=n, stratify=y)
-    return sub_X, sub_y
+def downsample_gene(X, y, n, n_splits=10):
+    return StratifiedShuffleSplit(n_splits=n_splits, train_size=n).split(X, y)
