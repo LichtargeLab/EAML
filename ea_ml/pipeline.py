@@ -32,7 +32,7 @@ class Pipeline:
         'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
     }
 
-    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
+    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=300,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
                  parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         # data arguments
