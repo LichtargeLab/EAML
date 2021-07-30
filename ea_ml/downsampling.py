@@ -5,8 +5,11 @@ methods.
 
 Note: This can be a long-running process, depending on the dataset size.
 """
-import pandas as pd
 from collections import defaultdict
+
+import pandas as pd
+from scipy.stats import hypergeom
+import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from .pipeline import Pipeline, compute_stats
@@ -14,7 +17,7 @@ from .weka import eval_gene
 
 
 class DownsamplingPipeline(Pipeline):
-    def __init__(self, expdir, data_fn, targets_fn, true_results, sample_sizes, n_repeats=10, reference='hg19',
+    def __init__(self, expdir, data_fn, targets_fn, true_results_fn, sample_sizes, n_repeats=10, reference='hg19',
                  cpus=1, kfolds=10, seed=111, dpi=150, weka_path='~/weka', min_af=None, max_af=None, af_field='AF',
                  include_X=False, parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed, dpi=dpi,
@@ -22,7 +25,7 @@ class DownsamplingPipeline(Pipeline):
                          parse_EA=parse_EA, memory=memory, annotation=annotation)
         self.sample_sizes = sample_sizes
         self.n_repeats = n_repeats
-        self.true_results = true_results
+        self.true_results = pd.read_csv(true_results_fn, index_col='gene')
         self.write_data = False
 
     def eval_gene(self, gene):
@@ -48,6 +51,7 @@ class DownsamplingPipeline(Pipeline):
             return None
 
     def report_results(self):
+        """Computes results file for each sampled experiment"""
         # lots of nesting here, is there a better way to do this?
         self.nonzero_results = {n: [] for n in self.sample_sizes}
         for n in self.sample_sizes:
@@ -67,10 +71,44 @@ class DownsamplingPipeline(Pipeline):
                 nonzero_df = compute_stats(mcc_df)
                 self.nonzero_results[n].append(nonzero_df)
                 nonzero_df.to_csv(subdir / f'meanMCC_results.nonzero-stats.{i}.csv')
+        self.hypergeometric_results = self.hypergeometric_overlap()
+        self.hypergeometric_results.to_csv(self.expdir / 'hypergeometric_results.csv')
+
+    def hypergeometric_overlap(self):
+        """
+        Calculates hypergeometric overlap with true results at each sample size.
+
+        For each sample size, we calculate the average number of genes identified across replicates and the average
+        overlap between each replicate and the true results. These are then compared to number of genes identified in
+        the true results and the total number of genes tested using a hypergeometric test.
+
+        Returns:
+            DataFrame: Summary of average overlap and hypergeometric enrichment for each sample size
+        """
+        true_results = self.true_results
+        true_preds = set(true_results.loc[(true_results['MCC'] > 0) & (true_results['qvalue'] < 0.1)].index)
+        hypergeom_pvalues, mean_overlaps, mean_preds = [], [], []
+        for n, results_df_l in self.nonzero_results.items():
+            n_overlaps, n_preds = [], []
+            for results_df in results_df_l:
+                sample_preds = set(results_df.loc[(results_df['MCC'] > 0) & (results_df['qvalue'] < 0.1)].index)
+                n_overlaps.append(len(sample_preds & true_preds))
+                n_preds.append(len(sample_preds))
+            mean_overlap = np.mean(n_overlaps)
+            mean_pred = np.mean(n_preds)
+            mean_overlaps.append(mean_overlap)
+            mean_preds.append(mean_pred)
+            hypergeom_pvalues.append(hypergeom.sf(mean_overlap - 1, len(true_results), len(true_preds), mean_pred))
+        hypergeom_results = pd.DataFrame(
+            {'mean_overlap': mean_overlaps, 'mean_predictions': mean_preds, 'hypergeometric_pvalue': hypergeom_pvalues},
+            index=self.nonzero_results.keys()
+        )
+        return hypergeom_results
 
     def visualize(self):
         pass
 
 
+# util functions
 def downsample_gene(X, y, n, n_splits=10):
     return StratifiedShuffleSplit(n_splits=n_splits, train_size=n).split(X, y)
