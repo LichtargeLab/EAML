@@ -6,6 +6,7 @@ from pathlib import Path
 
 from . import VERSION, DESCRIPTION, CLI
 from .pipeline import Pipeline
+from .downsampling import DownsamplingPipeline
 from .permute import run_permutations
 
 
@@ -57,6 +58,14 @@ def main():
     sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
     sub.add_argument('-c', '--clean', action='store_true', help='clean design matrix and permutation files')
 
+    # Downsampling experiment parser
+    info = 'evaluate statistical power by repeat stratified downsampling of cohort'
+    sub = subs.add_parser('downsample', help=info)
+    main_args(sub)
+    sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EA-ML experiment')
+    sub.add_argument('sample_sizes', type=int, nargs='+', help='sample sizes to test')
+    sub.add_argument('--nrepeats', type=int, default=10, help='number of replicates per sample size')
+
     # Parse arguments
     namespace = parser.parse_args()
     # Run the program
@@ -80,6 +89,10 @@ def run_program(parser, namespace):
     elif kwargs.pop('command') == 'permute':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions')]
         run_permutations(*args, **kwargs)
+    elif kwargs.pop('command') == 'downsample':
+        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'true_results', 'sample_sizes')]
+        pipeline = DownsamplingPipeline(*args, **kwargs)
+        pipeline.run()
     else:
         parser.print_help()
         sys.exit(1)

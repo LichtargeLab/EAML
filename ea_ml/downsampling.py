@@ -18,14 +18,14 @@ from .weka import eval_gene
 
 
 class DownsamplingPipeline(Pipeline):
-    def __init__(self, expdir, data_fn, targets_fn, true_results_fn, sample_sizes, n_repeats=10, reference='hg19',
+    def __init__(self, expdir, data_fn, targets_fn, true_results_fn, sample_sizes, nrepeats=10, reference='hg19',
                  cpus=1, kfolds=10, seed=111, dpi=300, weka_path='~/weka', min_af=None, max_af=None, af_field='AF',
                  include_X=False, parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed, dpi=dpi,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation)
         self.sample_sizes = sample_sizes
-        self.n_repeats = n_repeats
+        self.n_repeats = nrepeats
         self.true_results = pd.read_csv(true_results_fn, index_col='gene')
         self.write_data = False
 
