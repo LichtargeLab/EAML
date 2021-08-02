@@ -63,7 +63,7 @@ def main():
     sub = subs.add_parser('downsample', help=info)
     main_args(sub)
     sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EA-ML experiment')
-    sub.add_argument('sample_sizes', type=int, nargs='+', help='sample sizes to test')
+    sub.add_argument('--sample-sizes', type=int, nargs='+', help='sample sizes to test')
     sub.add_argument('--nrepeats', type=int, default=10, help='number of replicates per sample size')
 
     # Parse arguments
@@ -81,15 +81,15 @@ def run_program(parser, namespace):
         namespace (Namespace): The parsed argument namespace
 """
     kwargs = vars(namespace)
-
-    if kwargs.pop('command') == 'run':
+    command = kwargs.pop('command')
+    if command == 'run':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets')]
         pipeline = Pipeline(*args, **kwargs)
         pipeline.run()
-    elif kwargs.pop('command') == 'permute':
+    elif command == 'permute':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions')]
         run_permutations(*args, **kwargs)
-    elif kwargs.pop('command') == 'downsample':
+    elif command == 'downsample':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'true_results', 'sample_sizes')]
         pipeline = DownsamplingPipeline(*args, **kwargs)
         pipeline.run()
