@@ -1,3 +1,11 @@
+# 1.2.0 (2021-08-18)
+
+- Added module for rough power analysis
+  - Given a set of sample sizes, this will repeatedly sample the cohort and compare the average number of predictions
+    per sub-sample and their overlap with the predictions from the whole cohort
+  - Then computes a hypergeometric p-value at each sample size
+- Removed permutation module; this didn't provide meaningful information about EA-ML results and was too slow for regular use
+
 # 1.1.1 (2021-07-09)
 
 - Fixed VEP parser to account for fields from VEP returning something other than a tuple
