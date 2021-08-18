@@ -114,56 +114,30 @@ Optional arguments:
 | --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 | --nrepeats           | \<int\>   | number of replicates for each sample size                                           |
 
-### Permutation Analysis (experimental)
-
-Required arguments:
-
-| argument       | type          | description                                              |
-|----------------|---------------|----------------------------------------------------------|
-| data           | \<file\>      | VCF or directory of precomputed design matrices          |
-| targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
-| predictions    | \<file\>      | EA-ML results                                            |
-
-Optional arguments:
-
-| argument             | type      | description                                                                         |
-|----------------------|-----------|-------------------------------------------------------------------------------------|
-| -e, --experiment_dir | \<str\>   | experiment directory                                                                |
-| -r, --reference      | \<str\>   | genome reference (hg19, hg38)                                                       |
-| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)  |
-| --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
-| --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
-| --af-field           | \<str\>   | field with AF information                                                           |
-| -n, --n_runs         | \<int\>   | number of permutations to include in distribution                                   |
-| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
-| -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
-| -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
-| --cpus               | \<int\>   | number of CPUs to use                                                               |
-| --restart            | \<int\>   | restart permutations from this number                                               |
-| -c, --clean          | \<bool\>  | clean design matrix and permutation files                                           |
-| -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
-| --memory             | \<str\>   | memory argument for Weka JVM                                                        |
-
 
 ## Input Requirements
 
 In order to use this pipeline properly, it requires 3 input files:
 
-1. A VCF file containing all cohort variants annotated with gene information (from ANNOVAR), EA scores, and genotype
-   information for each cohort sample.
-2. A comma-delimited list of samples along with their disease status (0 or 1).
-3. A RefSeq-formatted reference file of genes (hg19 and hg38 are included in package)
+1. A custom-annotated VCF using either VEP+dbNSFP or ANNOVAR
+2. A comma-delimited list of samples along with their disease status (0 or 1)
+3. A reference file of genes contained info of chromosome, start & end positions, and canonical transcript (if using ANNOVAR)
 
-*Note: Current package reference files are derived from those used in the 2013-05-09 version of ANNOVAR*
+*Note: Current package reference files are derived from those used in the 2013-05-09 version of ANNOVAR and version 94 of ENSEMBL-VEP*
 
 The VCF file should follow proper formatting as described [here](<https://samtools.github.io/hts-specs/VCFv4.2.pdf>).
 
 Additionally, some extra information is required:
 
-- 'gene' and 'EA' annotations as fields in the INFO column
-- Different fields in INFO and FORMAT columns should be defined in the header, with type information
-- 'EA' attribute must be typed as a 'String' (Type=String), this is because of the way EA labels variants by transcript,
-  with nonsense, frameshift-indels and STOP loss variants defined as strings in the EA field
+- If working with ANNOVAR annotation:
+  - 'gene' and 'EA' annotations as fields in the INFO column
+  - Different fields in INFO and FORMAT columns should be defined in the header, with type information
+  - 'EA' attribute must be typed as a 'String' (Type=String), this is because of the way EA labels variants by transcript,
+    with nonsense, frameshift-indels and STOP loss variants defined as strings in the EA field
+- If working with VEP:
+  - 'Ensembl_proteinid' and 'EA' fields from dbNSFP
+  - 'Consequence', 'SYMBOL', and 'ENSP' fields from VEP
+  - 'EA' can be typed as a Float since loss-of-function variants are annotated in the 'Consequence' field
 
 ## Troubleshooting
 

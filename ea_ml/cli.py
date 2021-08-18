@@ -7,7 +7,6 @@ from pathlib import Path
 from . import VERSION, DESCRIPTION, CLI
 from .pipeline import Pipeline
 from .downsampling import DownsamplingPipeline
-from .permute import run_permutations
 
 
 def main_args(parser):
@@ -48,16 +47,6 @@ def main():
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
     sub.add_argument('--dpi', default=300, type=int, help='DPI for output figures')
 
-    # Permutation experiment parser
-    info = 'analyze significance of MCC scores through label permutations (experimental)'
-    sub = subs.add_parser('permute', help=info)
-    main_args(sub)
-    sub.add_argument('predictions', help='Path to real experiment results')
-    sub.add_argument('-n', '--n_runs', type=int, default=100,
-                     help='Number of permutations to include in distribution')
-    sub.add_argument('--restart', type=int, default=0, help='run to restart permutations at')
-    sub.add_argument('-c', '--clean', action='store_true', help='clean design matrix and permutation files')
-
     # Downsampling experiment parser
     info = 'evaluate statistical power by repeat stratified downsampling of cohort'
     sub = subs.add_parser('downsample', help=info)
@@ -86,9 +75,6 @@ def run_program(parser, namespace):
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets')]
         pipeline = Pipeline(*args, **kwargs)
         pipeline.run()
-    elif command == 'permute':
-        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'predictions')]
-        run_permutations(*args, **kwargs)
     elif command == 'downsample':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'true_results', 'sample_sizes')]
         pipeline = DownsamplingPipeline(*args, **kwargs)
