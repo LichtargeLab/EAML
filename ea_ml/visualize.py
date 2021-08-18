@@ -57,11 +57,12 @@ def mcc_hist(results, column='MCC', dpi=300):
 def downsample_enrichment_plot(hypergeom_df, dpi=300):
     fig = plt.figure(dpi=dpi)
     plt.plot(hypergeom_df.index, -np.log10(hypergeom_df['hypergeometric_pvalue']))
-    plt.hlines(-np.log10(0.05), 0, np.max(hypergeom_df.index), marker='o')
+    plt.hlines(-np.log10(0.05), 0, np.max(hypergeom_df.index))
+    plt.xticks(hypergeom_df.index, rotation=45)
     for n, row in hypergeom_df.iterrows():
         label = f'{row.mean_overlap} / {row.mean_predictions}'
-        plt.annotate(label, (n, row.hypergeometric_pvalue), textcoords='offset points', xytext=(0, 10), ha='center',
-                     fontsize=10)
+        plt.annotate(label, (n, -np.log10(row.hypergeometric_pvalue)), textcoords='offset points', xytext=(0, 10),
+                     ha='center', fontsize=10)
     plt.xlabel('Number of samples')
     plt.ylabel('-log10(Hypergeometric p-value)')
     sns.despine()
