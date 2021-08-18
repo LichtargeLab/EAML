@@ -41,10 +41,11 @@ ea-ml --help
 
 EA-ML can be run by calling `ea-ml` and one of its commands:
 
-| command     | description                                               |
-|-------------|-----------------------------------------------------------|
-| run         | run the EA-ML analysis                                    |
-| permute     | permute sample labels for evaluating confidence intervals |
+| command     | description                                                                           |
+|-------------|---------------------------------------------------------------------------------------|
+| run         | run the EA-ML analysis                                                                |
+| permute     | permute sample labels for evaluating confidence intervals                             |
+| downsample  | run power analysis by repeatedly sampling cohort and calculating overlap significance |
 
 ### Main Pipeline
 
@@ -77,6 +78,41 @@ Optional arguments:
 
 
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
+
+### Downsampling Analysis
+
+This is a crude power analysis that samples the given cohort at various sample sizes, then calculates the significance
+of the average overlap between predictions from the sample and predictions from the whole cohort.
+
+Required arguments:
+
+| argument       | type          | description                                              |
+|----------------|---------------|----------------------------------------------------------|
+| data           | \<file\>      | VCF or directory of precomputed design matrices          |
+| targets        | \<file\>      | two-column CSV with sample IDs and disease status        |
+| true_results   | \<file\>      | final results CSV from full cohort experiment            |
+| sample_sizes   | \<int\>       | sample sizes to test                                     |
+
+Optional arguments:
+
+| argument             | type      | description                                                                         |
+|----------------------|-----------|-------------------------------------------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                                                                |
+| -r, --reference      | \<str\>   | genome reference (hg19, hg38, GRCh37, GRCh38)                                       |
+| -a, --annotation     | \<str\>   | Variant annotation pipeline used (ANNOVAR, VEP)                                     |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)       |
+| --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
+| --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
+| --af-field           | \<str\>   | field with AF information                                                           |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
+| -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
+| --cpus               | \<int\>   | number of CPUs to use                                                               |
+| --write-data         | \<bool\>  | keeps design matrix after analysis completes                                        |
+| --dpi                | \<int\>   | DPI for output figures                                                              |
+| -w, --weka-path      | \<str\>   | location of Weka installation                                                       |
+| --memory             | \<str\>   | memory argument for Weka JVM                                                        |
+| --nrepeats           | \<int\>   | number of replicates for each sample size                                           |
 
 ### Permutation Analysis (experimental)
 

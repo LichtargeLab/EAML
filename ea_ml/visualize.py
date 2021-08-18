@@ -8,7 +8,7 @@ import seaborn as sns
 sns.set(context='talk', style='ticks')
 
 
-def mcc_scatter(results, column='MCC', dpi=150):
+def mcc_scatter(results, column='MCC', dpi=300):
     """
     Scatterplot of maxMCC results
 
@@ -31,7 +31,7 @@ def mcc_scatter(results, column='MCC', dpi=150):
     return fig
 
 
-def mcc_hist(results, column='MCC', dpi=150):
+def mcc_hist(results, column='MCC', dpi=300):
     """
     Histogram of MCC scores
 
@@ -51,6 +51,22 @@ def mcc_hist(results, column='MCC', dpi=150):
     plt.ylabel('Frequency')
     plt.tight_layout()
     sns.despine()
+    return fig
+
+
+def downsample_enrichment_plot(hypergeom_df, dpi=300):
+    fig = plt.figure(dpi=dpi)
+    plt.plot(hypergeom_df.index, -np.log10(hypergeom_df['hypergeometric_pvalue']))
+    plt.hlines(-np.log10(0.05), 0, np.max(hypergeom_df.index))
+    plt.xticks(hypergeom_df.index, rotation=45)
+    for n, row in hypergeom_df.iterrows():
+        label = f'{row.mean_overlap} / {row.mean_predictions}'
+        plt.annotate(label, (n, -np.log10(row.hypergeometric_pvalue)), textcoords='offset points', xytext=(0, 10),
+                     ha='center', fontsize=10)
+    plt.xlabel('Number of samples')
+    plt.ylabel('-log10(Hypergeometric p-value)')
+    sns.despine()
+    plt.tight_layout()
     return fig
 
 

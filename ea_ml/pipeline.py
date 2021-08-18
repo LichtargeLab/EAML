@@ -32,9 +32,9 @@ class Pipeline:
         'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
     }
 
-    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=150,
+    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=300,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='all', memory='Xmx2g', annotation='ANNOVAR'):
+                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -116,22 +116,6 @@ class Pipeline:
         else:
             return None
 
-    def compute_stats(self):
-        """
-        Generate z-score and p-value statistics for all non-zero MCC scored genes
-
-        Returns:
-            DataFrame: EA-ML results with non-zero MCCs and computed z-scores, p-values, and adjusted p-values
-        """
-        mcc_df = self.full_results[['mean', 'std']]
-        nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
-        nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
-        nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
-        nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
-        nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2  # two-sided test
-        nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
-        return nonzero
-
     def report_results(self):
         """Summarize and rank gene scores"""
         mcc_df_dict = defaultdict(list)
@@ -146,9 +130,8 @@ class Pipeline:
         mcc_df.sort_values('mean', ascending=False, inplace=True)
         mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
         self.full_results = mcc_df
-        stats_df = self.compute_stats()
-        stats_df.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.rankings')
-        self.nonzero_results = stats_df
+        self.nonzero_results = compute_stats(self.full_results)
+        self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def visualize(self):
         """
@@ -164,6 +147,26 @@ class Pipeline:
     def cleanup(self):
         """Cleans tmp directory"""
         shutil.rmtree(self.expdir / 'tmp/')
+
+
+def compute_stats(full_results):
+    """
+    Generate z-score and p-value statistics for all non-zero MCC scored genes
+
+    Args:
+        full_results (DataFrame): DataFrame with all classifier scores and ensemble average, for each gene
+
+    Returns:
+        DataFrame: EA-ML results with non-zero MCCs and corresponding z-scores, p-values, and adjusted p-values
+    """
+    mcc_df = full_results[['mean', 'std']]
+    nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
+    nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
+    nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
+    nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)
+    nonzero['pvalue'] = stats.norm.sf(abs(nonzero.zscore)) * 2  # two-sided test
+    nonzero['qvalue'] = multipletests(nonzero.pvalue, method='fdr_bh')[1]
+    return nonzero
 
 
 def load_reference(reference, include_X=False):
