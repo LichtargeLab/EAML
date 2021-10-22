@@ -126,7 +126,7 @@ def fetch_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
             return validate_EA(EA[nm_ids.index(canon_nm)])
         else:
             return validate_EA(EA[0])
-    else:
+    elif EA_parser != 'canonical':
         newEA = []
         for score in EA:
             newEA.append(validate_EA(score))
@@ -138,3 +138,5 @@ def fetch_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
             return np.nanmax(newEA)
         else:
             return newEA
+    else:
+        return np.nan
