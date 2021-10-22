@@ -1,3 +1,9 @@
+# 1.2.1 (2021-10-22)
+
+- Added default return of NaN when using canonical EA parser and canonical transcript isn't present for a variant
+  - Not sure how often this happens, but the code was written so that if the check for canonical transcript ID fails, it
+    fell back to the old 'all transcript-specific EA scores' approach, which may not be ideal
+
 # 1.2.0 (2021-08-18)
 
 - Added module for rough power analysis
