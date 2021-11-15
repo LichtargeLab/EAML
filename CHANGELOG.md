@@ -1,3 +1,7 @@
+# 1.2.2 (2021-11-14)
+
+- Fixed bug in check for missing alleles for genotype-to-zygosity conversion (pysam parses them as None, not '.')
+
 # 1.2.1 (2021-10-22)
 
 - Added default return of NaN when using canonical EA parser and canonical transcript isn't present for a variant
