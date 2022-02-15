@@ -6,6 +6,8 @@ import pandas as pd
 import seaborn as sns
 
 sns.set(context='talk', style='ticks')
+plt.rcParams['svg.fonttype'] = 'none'  # so text is exported correctly to Illustrator
+plt.rcParams.update({'font.sans-serif': 'Arial'})
 
 
 def mcc_scatter(results, column='MCC', dpi=300):
