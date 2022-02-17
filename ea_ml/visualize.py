@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 
 sns.set(context='talk', style='ticks')
+plt.rcParams['svg.fonttype'] = 'none'  # so text is exported correctly to Illustrator
 
 
 def mcc_scatter(results, column='MCC', dpi=300):
@@ -108,10 +109,8 @@ def manhattan_plot(mcc_df, reference, dpi=300):
         gene_ref = reference.loc[g]
         x = gene_ref.pos + (gene_ref.chrom - 1) * 300
         y = -np.log10(mcc_df.loc[gene, 'pvalue'])
-        ax.annotate(str(g), (x, y), bbox=bbox_props, textcoords='offset points', xytext=(0, 10), ha='center',
-                    fontsize=8)
+        ax.annotate(str(g), (x, y), textcoords='offset points', xytext=(0, 10), ha='center', fontsize=8)
     # top gene annotation
-    bbox_props = dict(boxstyle='round', fc='w', ec='0.5')
     if len(mcc_df.loc[mcc_df.qvalue <= 0.1]) < 30:
         for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index:
             _label_point(gene)
