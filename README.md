@@ -1,11 +1,11 @@
 # EA-ML
 
-This pipeline uses an ensemble of supervised learning algorithms to score a gene's contribution to disease risk based on
-its case/control separation ability. This is all based on a probability score (pEA) computed using the Evolutionary
-Action variant impact scoring method.
+This pipeline is an ensemble of supervised machine learning algorithms used to score a gene's contribution to disease
+risk based on its case/control separation ability. The approach utilizes a probability score (pEA) computed with the
+Evolutionary Action variant impact scoring method.
 
 The output is a ranked list of genes scored by the Matthew's Correlation Coefficient (MCC), effectively using
-classification accuracy as a proxy for a gene's relevance in a specified disease context.
+classification accuracy as a proxy for a gene's relevance in a specified disease.
 
 ## System Requirements
 
@@ -13,7 +13,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 
 EA-ML is runnable on a standard desktop computer with 16GB+ of RAM, however certain model training operations can be
 prohibitively slow without the use of multiple CPU cores, especially when operating on large datasets.
-Thus, it's highly recommended to use a computing cluster with many CPU cores.
+Thus, it's highly recommended to use a computing cluster with many CPU cores (10+ cores recommended).
 
 ### Software Requirements
 
@@ -105,6 +105,9 @@ ea-ml run example.vcf.gz example.samples.csv --experiment_dir ./ --reference exa
 This is a crude power analysis that samples the given cohort at various sample sizes, then calculates the significance
 of the average overlap between predictions from the sample and predictions from the whole cohort.
 
+*Note: This is a very slow operation that depends on the dataset size, sample sizes tested, number of replicates,
+and number of CPU cores used. Cluster computing is highly recommended here.*
+
 Required arguments:
 
 | argument        | type          | description                                              |
@@ -143,10 +146,12 @@ ea-ml downsample VCF.gz SamplePhenotypes.csv ./meanMCC-results.csv 250 500 1000 
 
 ## Input Requirements
 
-In order to use this pipeline properly, it requires 3 input files:
+To use this pipeline properly, 3 input files are required:
 
 1. A custom-annotated VCF using either VEP (ENSEMBL transcripts) or ANNOVAR (RefSeq transcripts)
 2. A comma-delimited list of samples along with their disease status (0 or 1)
+3. A reference file of annotated genes and positions. Common references are provided with the package, or a custom file
+   that follows the same format can be used.
 
 *Note: Current package reference files are derived from those used in the 2013-05-09 version of ANNOVAR and
 version 94 of ENSEMBL-VEP*
