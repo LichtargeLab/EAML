@@ -93,8 +93,11 @@ Optional arguments:
 *Note: To specify leave-one-out cross-validation, set the number of folds equal to -1*
 
 #### Example Usage:
+
+Example files are in the example_data directory and can be used to test that the pipeline works. Runtime should only be
+a few seconds and output all files described in 'Output' section.
 ```bash
-ea-ml run VCF.gz SamplePhenotypes.csv --experiment_dir ./ --reference GRCh38 --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 10
+ea-ml run example.vcf.gz example.samples.csv --experiment_dir ./ --reference example.reference.txt --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 1
 ```
 
 ### Downsampling Analysis

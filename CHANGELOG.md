@@ -1,3 +1,9 @@
+# 1.2.3 (2022-02-17)
+
+- minor formatting changes for Manhattan plot so that text import to Illustrator properly
+- Lots of README changes
+- Added example files for testing
+
 # 1.2.2 (2021-11-14)
 
 - Fixed bug in check for missing alleles for genotype-to-zygosity conversion (pysam parses them as None, not '.')
