@@ -26,7 +26,7 @@ This package is supported for macOS and Linux. It has been tested on the followi
 
 #### Dependencies
 
-- Anaconda3
+- [Anaconda3/Miniconda3](https://docs.anaconda.com/anaconda/install/index.html)
 - [Weka 3.8.0+](https://waikato.github.io/weka-wiki/downloading_weka/)
     - Weka must be downloaded separately
 - Python 3.7+
@@ -75,7 +75,7 @@ Optional arguments:
 | argument             | type      | description                                                                         |
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
-| -r, --reference      | \<str\>   | genome reference file to use (hg19, hg38, GRCh37, GRCh38)                           |
+| -r, --reference      | \<str\>   | genome reference version or file (hg19, hg38, GRCh37, GRCh38)                       |
 | -a, --annotation     | \<str\>   | Variant annotation pipeline used (ANNOVAR, VEP)                                     |
 | --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)       |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
@@ -117,7 +117,7 @@ Optional arguments:
 | argument             | type      | description                                                                         |
 |----------------------|-----------|-------------------------------------------------------------------------------------|
 | -e, --experiment_dir | \<str\>   | experiment directory                                                                |
-| -r, --reference      | \<str\>   | genome reference (hg19, hg38, GRCh37, GRCh38)                                       |
+| -r, --reference      | \<str\>   | genome reference version or file (hg19, hg38, GRCh37, GRCh38)                       |
 | -a, --annotation     | \<str\>   | Variant annotation pipeline used (ANNOVAR, VEP)                                     |
 | --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)       |
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
