@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from adjustText import adjust_text
 
 sns.set(context='talk', style='ticks')
 plt.rcParams['svg.fonttype'] = 'none'  # so text is exported correctly to Illustrator
@@ -108,15 +109,15 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     def _label_point(g):
         gene_ref = reference.loc[g]
         x = gene_ref.pos + (gene_ref.chrom - 1) * 300
-        y = -np.log10(mcc_df.loc[gene, 'pvalue'])
-        ax.annotate(str(g), (x, y), textcoords='offset points', xytext=(0, 10), ha='center', fontsize=8)
+        y = -np.log10(mcc_df.loc[g, 'pvalue'])
+        return ax.text(x, y, str(g), fontsize=8)
+
     # top gene annotation
-    if len(mcc_df.loc[mcc_df.qvalue <= 0.1]) < 30:
-        for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index:
-            _label_point(gene)
+    if len(mcc_df.loc[mcc_df.qvalue <= 0.1]) < 25:
+        texts = [_label_point(gene) for gene in mcc_df.loc[mcc_df.pvalue <= fdr_cutoff].index]
     else:
-        for gene in mcc_df.nsmallest(30, 'pvalue').index:
-            _label_point(gene)
+        texts = [_label_point(gene) for gene in mcc_df.nsmallest(25, 'pvalue').index]
+
     ax.axhline(-np.log10(fdr_cutoff), ls='--', color='black')
     ax.set_xlabel('Chromosome', fontsize=16)
     ax.set_ylabel(r'$-log_{10}$(p-value)', fontsize=16)
@@ -127,4 +128,5 @@ def manhattan_plot(mcc_df, reference, dpi=300):
     ax.set_ylim(0, -np.log10(mcc_df.pvalue.min()) + 1)
     fig.tight_layout()
     sns.despine()
+    adjust_text(texts)
     return fig

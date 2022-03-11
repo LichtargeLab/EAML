@@ -19,6 +19,7 @@ setuptools.setup(
     zip_safe=False,
     entry_points={'console_scripts': [f'{CLI} = ea_ml.cli:main']},
     install_requires=[
+        'adjusttext=0.7.3.1',
         'joblib',
         'matplotlib>=3.1.1',
         'numpy>=1.16.2',
