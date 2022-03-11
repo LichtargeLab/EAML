@@ -1,3 +1,7 @@
+# 1.2.4 (2022-03-11)
+
+- added adjustText to clean up Manhattan plot labeling overlap
+
 # 1.2.3 (2022-02-17)
 
 - minor formatting changes for Manhattan plot so that text import to Illustrator properly
