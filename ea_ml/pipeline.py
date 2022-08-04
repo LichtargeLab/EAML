@@ -138,11 +138,11 @@ class Pipeline:
         Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
-        mcc_scatter(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.png')
-        mcc_hist(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.png')
-        mcc_scatter(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.png')
-        mcc_hist(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.png')
-        manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.svg')
+        mcc_scatter(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.pdf')
+        mcc_hist(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.pdf')
+        mcc_scatter(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.pdf')
+        mcc_hist(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.pdf')
+        manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.pdf')
 
     def cleanup(self):
         """Cleans tmp directory"""
