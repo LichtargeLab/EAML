@@ -7,7 +7,7 @@ import seaborn as sns
 from adjustText import adjust_text
 
 sns.set(context='talk', style='ticks')
-plt.rcParams['svg.fonttype'] = 'none'  # so text is exported correctly to Illustrator
+plt.rcParams['pdf.fonttype'] = 42  # so text is exported correctly to Illustrator
 
 
 def mcc_scatter(results, column='MCC', dpi=300):
@@ -120,7 +120,7 @@ def manhattan_plot(mcc_df, reference, dpi=300):
 
     ax.axhline(-np.log10(fdr_cutoff), ls='--', color='black')
     ax.set_xlabel('Chromosome', fontsize=16)
-    ax.set_ylabel(r'$-log_{10}$(p-value)', fontsize=16)
+    ax.set_ylabel('-log10(p-value)', fontsize=16)
     ax.set_xticks(ticks)
     ax.set_xticklabels(['X' if chrom == 23 else 'Y' if chrom == 24 else str(chrom) for chrom in reference.chrom.unique()])
     ax.tick_params(labelsize=14)
