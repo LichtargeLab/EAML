@@ -1,6 +1,10 @@
-# 1.2.5 (2022-08-04)
+# 1.2.6 (2022-08-04)
 
 - Changed figure output format to PDF (SVG refuses to obey font defaults when opening in Illustrator)
+
+# 1.2.5 (2022-03-13)
+
+- Remove adjustText version requirement for compatibility
 
 # 1.2.4 (2022-03-11)
 
