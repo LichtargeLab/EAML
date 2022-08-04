@@ -1,10 +1,14 @@
+# 1.2.5 (2022-08-04)
+
+- Changed figure output format to PDF (SVG refuses to obey font defaults when opening in Illustrator)
+
 # 1.2.4 (2022-03-11)
 
-- added adjustText to clean up Manhattan plot labeling overlap
+- Added adjustText to clean up Manhattan plot labeling overlap
 
 # 1.2.3 (2022-02-17)
 
-- minor formatting changes for Manhattan plot so that text import to Illustrator properly
+- Minor formatting changes for Manhattan plot so that text import to Illustrator properly
 - Lots of README changes
 - Added example files for testing
 
