@@ -1,3 +1,9 @@
+# 1.2.7 (2022-08-10)
+
+- standardized figure size across all figures
+- added options to visualize module to control figure parameters using matplotlib rcParams system (only when importing separately from CLI calls)
+- added labels to all genes above FDR threshold on Manhattan plot
+
 # 1.2.6 (2022-08-04)
 
 - Changed figure output format to PDF (SVG refuses to obey font defaults when opening in Illustrator)
