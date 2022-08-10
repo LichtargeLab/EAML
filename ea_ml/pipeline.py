@@ -32,9 +32,9 @@ class Pipeline:
         'MultilayerPerceptron': '-L 0.3 -M 0.2 -N 500 -V 0 -S 0 -E 20 -H a'
     }
 
-    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, dpi=300,
-                 weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
+    def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, weka_path='~/weka',
+                 min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False, parse_EA='canonical',
+                 memory='Xmx2g', annotation='ANNOVAR'):
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -51,7 +51,6 @@ class Pipeline:
         self.max_af = max_af
         self.af_field = af_field
         self.cpus = cpus
-        self.dpi = dpi
         self.write_data = write_data
         self.EA_parser = parse_EA
 
@@ -138,11 +137,17 @@ class Pipeline:
         Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
-        mcc_scatter(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-scatter.pdf')
-        mcc_hist(self.full_results, column='mean', dpi=self.dpi).savefig(self.expdir / f'meanMCC-hist.pdf')
-        mcc_scatter(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-scatter.nonzero.pdf')
-        mcc_hist(self.nonzero_results, column='MCC', dpi=self.dpi).savefig(self.expdir / 'meanMCC-hist.nonzero.pdf')
-        manhattan_plot(self.nonzero_results, self.reference, dpi=self.dpi).savefig(self.expdir / 'MCC-manhattan.pdf')
+        default_fig_params = {'figure.figsize': (8, 6)}
+        mcc_scatter(self.full_results, column='mean', fig_params=default_fig_params)\
+            .savefig(self.expdir / f'meanMCC-scatter.pdf')
+        mcc_hist(self.full_results, column='mean', fig_params=default_fig_params)\
+            .savefig(self.expdir / f'meanMCC-hist.pdf')
+        mcc_scatter(self.nonzero_results, column='MCC', fig_params=default_fig_params)\
+            .savefig(self.expdir / 'meanMCC-scatter.nonzero.pdf')
+        mcc_hist(self.nonzero_results, column='MCC', fig_params=default_fig_params)\
+            .savefig(self.expdir / 'meanMCC-hist.nonzero.pdf')
+        manhattan_plot(self.nonzero_results, self.reference, fig_params=default_fig_params)\
+            .savefig(self.expdir / 'MCC-manhattan.pdf')
 
     def cleanup(self):
         """Cleans tmp directory"""

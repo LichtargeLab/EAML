@@ -45,7 +45,6 @@ def main():
     sub = subs.add_parser('run', help=info)
     main_args(sub)
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
-    sub.add_argument('--dpi', default=300, type=int, help='DPI for output figures')
 
     # Downsampling experiment parser
     info = 'evaluate statistical power by repeat stratified downsampling of cohort'

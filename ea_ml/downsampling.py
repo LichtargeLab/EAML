@@ -19,9 +19,9 @@ from .weka import eval_gene
 
 class DownsamplingPipeline(Pipeline):
     def __init__(self, expdir, data_fn, targets_fn, true_results_fn, sample_sizes, nrepeats=10, reference='hg19',
-                 cpus=1, kfolds=10, seed=111, dpi=300, weka_path='~/weka', min_af=None, max_af=None, af_field='AF',
+                 cpus=1, kfolds=10, seed=111, weka_path='~/weka', min_af=None, max_af=None, af_field='AF',
                  include_X=False, parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
-        super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed, dpi=dpi,
+        super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation)
         self.sample_sizes = sample_sizes
@@ -108,7 +108,9 @@ class DownsamplingPipeline(Pipeline):
 
     def visualize(self):
         """Generate summary plot of downsampling overlap with true results"""
-        downsample_enrichment_plot(self.hypergeometric_results, dpi=self.dpi).savefig(self.expdir / 'downsampled_hypergeometric-power.png')
+        default_fig_params = {'figure.figsize': (8, 6)}
+        downsample_enrichment_plot(self.hypergeometric_results, fig_params=default_fig_params)\
+            .savefig(self.expdir / 'downsampled_hypergeometric-power.pdf')
 
 
 # util functions
