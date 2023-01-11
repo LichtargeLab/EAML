@@ -1,4 +1,4 @@
-name: pyEA-ML
+name: EAML
 channels:
   - conda-forge
   - bioconda

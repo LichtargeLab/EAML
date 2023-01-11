@@ -1,4 +1,4 @@
-# EA-ML
+# EAML
 
 This pipeline is an ensemble of supervised machine learning algorithms used to score a gene's contribution to disease
 risk based on its case/control separation ability. The approach utilizes a probability score (pEA) computed with the
@@ -11,7 +11,7 @@ classification accuracy as a proxy for a gene's relevance in a specified disease
 
 ### Hardware Requirements
 
-EA-ML is runnable on a standard desktop computer with 16GB+ of RAM, however certain model training operations can be
+EAML is runnable on a standard desktop computer with 16GB+ of RAM, however certain model training operations can be
 prohibitively slow without the use of multiple CPU cores, especially when operating on large datasets.
 Thus, it's highly recommended to use a computing cluster with many CPU cores (10+ cores recommended).
 
@@ -37,27 +37,27 @@ This package is supported for macOS and Linux. It has been tested on the followi
 
 To clone the pipeline and install the conda environment:
 ```bash
-git clone https://github.com/LichtargeLab/pyEA-ML.git
-conda env create -f ./pyEA-ML/environment.yml
-pip install -e ./pyEA-ML/
+git clone https://github.com/LichtargeLab/EAML.git
+conda env create -f ./EAML/environment.yml
+pip install -e ./EAML/
 ```
 
-EA-ML can also be installed without editable mode, but any changes pulled later won't be automatically included.
+EAML can also be installed without editable mode, but any changes pulled later won't be automatically included.
 
 ## Usage
 
-It is highly recommended to run any EA-ML analysis inside a virtual environment.
+It is highly recommended to run any EAML analysis inside a virtual environment.
 
 See available commands:
 ```bash
-ea-ml --help
+eaml --help
 ```
 
-EA-ML can be run by calling `ea-ml` and one of its commands:
+EAML can be run by calling `eaml` and one of its commands:
 
 | command     | description                                                                           |
 |-------------|---------------------------------------------------------------------------------------|
-| run         | run the EA-ML analysis                                                                |
+| run         | run the EAML analysis                                                                |
 | downsample  | run power analysis by repeatedly sampling cohort and calculating overlap significance |
 
 ### Main Pipeline
@@ -97,7 +97,7 @@ Optional arguments:
 Example files are in the example_data directory and can be used to test that the pipeline works. Runtime should only be
 a few seconds and output all files described in 'Output' section.
 ```bash
-ea-ml run example.vcf.gz example.samples.csv --experiment_dir ./ --reference example.reference.txt --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 1
+eaml run example.vcf.gz example.samples.csv --experiment_dir ./ --reference example.reference.txt --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 1
 ```
 
 ### Downsampling Analysis
@@ -140,7 +140,7 @@ Optional arguments:
 
 #### Example Usage:
 ```bash
-ea-ml downsample VCF.gz SamplePhenotypes.csv ./meanMCC-results.csv 250 500 1000 --experiment_dir ./ --reference GRCh38 \
+eaml downsample VCF.gz SamplePhenotypes.csv ./meanMCC-results.csv 250 500 1000 --experiment_dir ./ --reference GRCh38 \
 --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 10 --nrepeats 1000
 ```
 

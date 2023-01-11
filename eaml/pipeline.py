@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Main script for EA-ML pipeline."""
+"""Main script for EAML pipeline."""
 import datetime
 import shutil
 import time
@@ -134,7 +134,7 @@ class Pipeline:
 
     def visualize(self):
         """
-        Generate summary figures of EA-ML results, including a Manhattan plot of p-values and scatterplots and
+        Generate summary figures of EAML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
         default_fig_params = {'figure.figsize': (8, 6)}
@@ -162,7 +162,7 @@ def compute_stats(full_results):
         full_results (DataFrame): DataFrame with all classifier scores and ensemble average, for each gene
 
     Returns:
-        DataFrame: EA-ML results with non-zero MCCs and corresponding z-scores, p-values, and adjusted p-values
+        DataFrame: EAML results with non-zero MCCs and corresponding z-scores, p-values, and adjusted p-values
     """
     mcc_df = full_results[['mean', 'std']]
     nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
@@ -186,13 +186,13 @@ def load_reference(reference, include_X=False):
         DataFrame: DataFrame with chromosome and position information for each annotated transcript
     """
     if reference == 'hg19':
-        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg19.May2013.txt')
+        reference_fn = resource_filename('eaml', 'data/refGene-lite_hg19.May2013.txt')
     elif reference == 'hg38':
-        reference_fn = resource_filename('ea_ml', 'data/refGene-lite_hg38.June2017.txt')
+        reference_fn = resource_filename('eaml', 'data/refGene-lite_hg38.June2017.txt')
     elif reference == 'GRCh37':
-        reference_fn = resource_filename('ea_ml', 'data/ENSEMBL-lite_GRCh37.v75.txt')
+        reference_fn = resource_filename('eaml', 'data/ENSEMBL-lite_GRCh37.v75.txt')
     elif reference == 'GRCh38':
-        reference_fn = resource_filename('ea_ml', 'data/ENSEMBL-lite_GRCh38.v94.txt')
+        reference_fn = resource_filename('eaml', 'data/ENSEMBL-lite_GRCh38.v94.txt')
     else:
         reference_fn = reference
     reference_df = pd.read_csv(reference_fn, sep='\t', index_col='gene', dtype={'chrom': str})
