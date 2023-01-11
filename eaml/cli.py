@@ -4,7 +4,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from . import VERSION, DESCRIPTION, CLI, __project__
+from . import VERSION, DESCRIPTION
 from .pipeline import Pipeline
 from .downsampling import DownsamplingPipeline
 
