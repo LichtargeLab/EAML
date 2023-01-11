@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from .vcf import parse_ANNOVAR, parse_VEP
 from .visualize import mcc_hist, mcc_scatter, manhattan_plot
-from .weka import eval_gene
+from .weka import eval_feature
 
 
 class Pipeline:
@@ -58,10 +58,10 @@ class Pipeline:
         """Run full pipeline from start to finish"""
         start = time.time()
         (self.expdir / 'tmp').mkdir(exist_ok=True)
-        gene_results = Parallel(n_jobs=self.cpus)(
-            delayed(self.eval_gene)(gene) for gene in tqdm(self.reference.index.unique())
+        results = Parallel(n_jobs=self.cpus)(
+            delayed(self.eval_feature)(gene) for gene in tqdm(self.reference.index.unique())
         )
-        self.raw_results = [result for result in gene_results if result]
+        self.raw_results = [result for result in results if result]
         self.report_results()
         print('\nGene scoring completed. Analysis summary in experiment directory.')
         self.visualize()
@@ -72,7 +72,7 @@ class Pipeline:
 
     def compute_gene_dmatrix(self, gene):
         """
-        Computes the full design matrix from an input VCF
+        Computes the full design matrix for given gene from an input VCF
 
         Args:
             gene (str): HGSC gene symbol
@@ -93,25 +93,29 @@ class Pipeline:
             dmatrix.to_csv(dmatrix_dir / f'{gene}.csv')
         return dmatrix
 
-    def eval_gene(self, gene):
+    def compute_dmatrix(self, feature):
+        return self.compute_gene_dmatrix(feature)
+
+    def eval_feature(self, feature):
         """
         Parses input data for a given gene and evaluates it using Weka
 
         Args:
-            gene (str): HGSC gene symbol
+            feature (str): Name of feature (gene symbol/pathway)
 
         Returns:
             dict(float): Mapping of classifier to MCC from cross validation
         """
         if self.data_fn.is_dir():
-            gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
+            dmatrix = pd.read_csv(self.data_fn / f'{feature}.csv', index_col=0)
         else:
-            gene_dmatrix = self.compute_gene_dmatrix(gene)
-        if (gene_dmatrix != 0).any().any():
-            mcc_results = eval_gene(gene, gene_dmatrix, self.targets, self.class_params, seed=self.seed, cv=self.kfolds,
-                                    expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
-            (self.expdir / f'tmp/{gene}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
-            return gene, mcc_results
+            dmatrix = self.compute_dmatrix(feature)
+        if (dmatrix != 0).any().any():
+            mcc_results = eval_feature(feature, dmatrix, self.targets, self.class_params, seed=self.seed,
+                                       cv=self.kfolds, expdir=self.expdir, weka_path=self.weka_path,
+                                       memory=self.weka_mem)
+            (self.expdir / f'tmp/{feature}.arff').unlink()  # clear intermediate ARFF file after gene scoring completes
+            return feature, mcc_results
         else:
             return None
 

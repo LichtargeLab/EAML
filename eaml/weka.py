@@ -50,12 +50,13 @@ def parse_weka_output(stdout):
             return score
 
 
-def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka', memory='Xmx2g'):
+def eval_feature(feature_name, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka',
+                 memory='Xmx2g'):
     """
     Evaluate gene's classification performance across all Pipeline classifiers
 
     Args:
-        gene (str): HGSC gene symbol
+        feature_name (str): Pathway/gene name
         dmatrix (DataFrame): EA design matrix
         targets (Series): Target classes for all samples
         clf_calls (dict): Mapping of Weka classifier to hyperparameter string
@@ -71,7 +72,7 @@ def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.
     mcc_results = {}
     if cv == -1:
         cv = len(dmatrix)
-    arff_fn = expdir / 'tmp' / f'{gene}.arff'
+    arff_fn = expdir / 'tmp' / f'{feature_name}.arff'
     write_arff(dmatrix, targets, arff_fn)
     for clf, params in clf_calls.items():
         mcc_results[clf] = call_weka(clf, params, arff_fn, weka_path=weka_path, cv=cv, seed=seed, memory=memory)

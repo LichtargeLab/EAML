@@ -14,7 +14,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from .pipeline import Pipeline, compute_stats
 from .visualize import downsample_enrichment_plot
-from .weka import eval_gene
+from .weka import eval_feature
 
 
 class DownsamplingPipeline(Pipeline):
@@ -26,28 +26,28 @@ class DownsamplingPipeline(Pipeline):
                          parse_EA=parse_EA, memory=memory, annotation=annotation)
         self.sample_sizes = sample_sizes
         self.n_repeats = nrepeats
-        self.true_results = pd.read_csv(true_results_fn, index_col='gene')
+        self.true_results = pd.read_csv(true_results_fn, index_col=0)
         self.write_data = False
 
-    def eval_gene(self, gene):
-        """Parse input data for a given gene and evaluate with Weka repeatedly for each sample size"""
-        # first check if gene was scored by whole cohort run
-        if gene in self.true_results.index:
+    def eval_feature(self, feature):
+        """Parse input data for a given feature and evaluate with Weka repeatedly for each sample size"""
+        # first check if feature was scored by whole cohort run
+        if feature in self.true_results.index:
             sampled_results = defaultdict(list)
             if self.data_fn.is_dir():
-                gene_dmatrix = pd.read_csv(self.data_fn / f'{gene}.csv', index_col=0)
+                dmatrix = pd.read_csv(self.data_fn / f'{feature}.csv', index_col=0)
             else:
-                gene_dmatrix = self.compute_gene_dmatrix(gene)
+                dmatrix = self.compute_gene_dmatrix(feature)
             for sample_size in self.sample_sizes:
-                splits = downsample_gene(gene_dmatrix, self.targets, sample_size, n_splits=self.n_repeats)
+                splits = downsample_gene(dmatrix, self.targets, sample_size, n_splits=self.n_repeats)
                 for split_idx, _ in splits:
-                    sub_X = gene_dmatrix.iloc[split_idx]
+                    sub_X = dmatrix.iloc[split_idx]
                     sub_y = self.targets.iloc[split_idx]
-                    mcc_results = eval_gene(gene, sub_X, sub_y, self.class_params, seed=self.seed, cv=self.kfolds,
-                                            expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
+                    mcc_results = eval_feature(feature, sub_X, sub_y, self.class_params, seed=self.seed, cv=self.kfolds,
+                                               expdir=self.expdir, weka_path=self.weka_path, memory=self.weka_mem)
                     sampled_results[sample_size].append(mcc_results)
-                    (self.expdir / f'tmp/{gene}.arff').unlink()
-            return gene, sampled_results
+                    (self.expdir / f'tmp/{feature}.arff').unlink()
+            return feature, sampled_results
         else:
             return None
 
