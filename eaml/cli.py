@@ -7,12 +7,13 @@ from pathlib import Path
 from . import CLI, VERSION, DESCRIPTION
 from .pipeline import Pipeline
 from .downsampling import DownsamplingPipeline
+from .pathways import PathwayPipeline
 
 
 def main_args(parser):
     """Common arguments for all modules"""
     parser.add_argument('data', type=Path,
-                        help='VCF file annotated by ANNOVAR and EA, or CSV with Pandas-multi-indexed columns')
+                        help='VCF file annotated by ANNOVAR or VEP and EA, or CSV with Pandas-multi-indexed columns')
     parser.add_argument('targets',
                         help='comma-delimited file with VCF sample IDs and corresponding disease status (0 or 1)')
     parser.add_argument('-e', '--experiment-dir', default='.', type=Path, help='root directory for experiment')
@@ -38,10 +39,10 @@ def main():
     parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', '--version', action='version', version=VERSION)
-    subs = parser.add_subparsers(dest='command', metavar="<command>")
+    subs = parser.add_subparsers(dest='command')
 
     # Pipeline parser
-    info = 'run the EAML analysis'
+    info = 'run the EAML analysis on genes'
     sub = subs.add_parser('run', help=info)
     main_args(sub)
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
@@ -53,6 +54,14 @@ def main():
     sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EAML experiment')
     sub.add_argument('--sample-sizes', type=int, nargs='+', help='sample sizes to test')
     sub.add_argument('--nrepeats', type=int, default=10, help='number of replicates per sample size')
+
+    # Pathway pipeline parser
+    info = 'run EAML analysis on defined pathways/communities'
+    sub = subs.add_parser('pathways', help=info)
+    main_args(sub)
+    sub.add_argument('pathways_file', type=Path, help='Tab-separated file with pathways/communities and corresponding'
+                                                      'comma-separated lists of genes')
+    sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
 
     # Parse arguments
     namespace = parser.parse_args()
@@ -77,6 +86,10 @@ def run_program(parser, namespace):
     elif command == 'downsample':
         args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'true_results', 'sample_sizes')]
         pipeline = DownsamplingPipeline(*args, **kwargs)
+        pipeline.run()
+    elif command == 'pathways':
+        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'pathways_file')]
+        pipeline = PathwayPipeline(*args, **kwargs)
         pipeline.run()
     else:
         parser.print_help()
