@@ -17,7 +17,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
-    entry_points={'console_scripts': [f'eaml = eaml.cli:main', f'ea-ml = eaml.cli:main']},
+    entry_points={'console_scripts': [f'{CLI} = eaml.cli:main', 'ea-ml = eaml.cli:main']},
     install_requires=[
         'adjusttext',
         'joblib',

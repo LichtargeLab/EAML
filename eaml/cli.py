@@ -4,7 +4,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from . import VERSION, DESCRIPTION
+from . import CLI, VERSION, DESCRIPTION
 from .pipeline import Pipeline
 from .downsampling import DownsamplingPipeline
 
@@ -35,7 +35,7 @@ def main_args(parser):
 # noinspection PyTypeChecker
 def main():
     """Process command-line arguments and run the program."""
-    parser = argparse.ArgumentParser(prog='EAML', description=DESCRIPTION,
+    parser = argparse.ArgumentParser(prog=CLI, description=DESCRIPTION,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', '--version', action='version', version=VERSION)
     subs = parser.add_subparsers(dest='command', metavar="<command>")
