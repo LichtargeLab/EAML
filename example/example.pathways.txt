@@ -1,0 +1,3 @@
+path1	APOE,APOC1
+path2	APOE
+path3	APOC1
