@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import setuptools
 
-from ea_ml import __project__, __version__, CLI, DESCRIPTION
+from eaml import __project__, __version__, CLI, DESCRIPTION
 
 README = open('README.md').read()
 CHANGES = open('CHANGELOG.md').read()
@@ -13,11 +13,11 @@ setuptools.setup(
     long_description=f'{README}\n{CHANGES}',
     author='Dillon Shapiro',
     author_email='drshapir@bcm.edu',
-    url='https://github.com/LichtargeLab/pyEA-ML',
+    url='https://github.com/LichtargeLab/EAML',
     packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
-    entry_points={'console_scripts': [f'{CLI} = ea_ml.cli:main']},
+    entry_points={'console_scripts': [f'{CLI} = eaml.cli:main', 'ea-ml = eaml.cli:main']},
     install_requires=[
         'adjusttext',
         'joblib',

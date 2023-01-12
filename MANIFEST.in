@@ -1,2 +1,2 @@
 include CHANGELOG.md
-include ea_ml/data/*
+include eaml/data/*

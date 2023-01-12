@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Command-line interface for pyEA-ML"""
+"""Command-line interface for EAML"""
 import sys
 import argparse
 from pathlib import Path
 
-from . import VERSION, DESCRIPTION, CLI
+from . import CLI, VERSION, DESCRIPTION
 from .pipeline import Pipeline
 from .downsampling import DownsamplingPipeline
 
@@ -41,7 +41,7 @@ def main():
     subs = parser.add_subparsers(dest='command', metavar="<command>")
 
     # Pipeline parser
-    info = 'run the EA-ML analysis'
+    info = 'run the EAML analysis'
     sub = subs.add_parser('run', help=info)
     main_args(sub)
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
@@ -50,7 +50,7 @@ def main():
     info = 'evaluate statistical power by repeat stratified downsampling of cohort'
     sub = subs.add_parser('downsample', help=info)
     main_args(sub)
-    sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EA-ML experiment')
+    sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EAML experiment')
     sub.add_argument('--sample-sizes', type=int, nargs='+', help='sample sizes to test')
     sub.add_argument('--nrepeats', type=int, default=10, help='number of replicates per sample size')
 

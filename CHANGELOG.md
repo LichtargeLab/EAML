@@ -1,8 +1,14 @@
+# 1.3.0 (2023-01-11)
+
+- Renamed project and all instances of "EA-ML" and "ea_ml" to "EAML" to be inline with publications
+  - Probably need to re-clone the repo to pull updates
+- Added `eaml` as CLI entry-point for simplification
+
 # 1.2.7 (2022-08-10)
 
-- standardized figure size across all figures
-- added options to visualize module to control figure parameters using matplotlib rcParams system (only when importing separately from CLI calls)
-- added labels to all genes above FDR threshold on Manhattan plot
+- Standardized figure size across all figures
+- Added options to visualize module to control figure parameters using matplotlib rcParams system (only when importing separately from CLI calls)
+- Added labels to all genes above FDR threshold on Manhattan plot
 
 # 1.2.6 (2022-08-04)
 
@@ -38,7 +44,7 @@
   - Given a set of sample sizes, this will repeatedly sample the cohort and compare the average number of predictions
     per sub-sample and their overlap with the predictions from the whole cohort
   - Then computes a hypergeometric p-value at each sample size
-- Removed permutation module; this didn't provide meaningful information about EA-ML results and was too slow for regular use
+- Removed permutation module; this didn't provide meaningful information about EAML results and was too slow for regular use
 
 # 1.1.1 (2021-07-09)
 

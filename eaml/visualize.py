@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Functions for visualizing EA-ML results"""
+"""Functions for visualizing EAML results"""
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ def mcc_scatter(results, column='MCC', fig_params=None):
     Scatterplot of maxMCC results
 
     Args:
-        results (DataFrame): Scored results from EA-ML
+        results (DataFrame): Scored results from EAML
         column (str): Score column to plot
         fig_params (dict): Parameters for customizing figure
 
@@ -39,7 +39,7 @@ def mcc_hist(results, column='MCC', fig_params=None):
     Histogram of MCC scores
 
     Args:
-        results (DataFrame): Scored results from EA-ML
+        results (DataFrame): Scored results from EAML
         column (str): Score column to plot
         fig_params (dict): Parameters for customizing figure
 
@@ -80,7 +80,7 @@ def manhattan_plot(mcc_df, reference, fig_params=None):
     Generates a Manhattan plot, given DataFrames of MCC rankings and gene positions
 
     Args:
-        mcc_df (pd.DataFrame): Scored results from EA-ML, must have column corresponding to p-value, indexed by gene
+        mcc_df (pd.DataFrame): Scored results from EAML, must have column corresponding to p-value, indexed by gene
         reference (pd.DataFrame): RefGene-formatted reference info for only tested genes,
             including chromosome and positions
         fig_params (dict): Parameters for customizing figure
