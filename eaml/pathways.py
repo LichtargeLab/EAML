@@ -20,7 +20,7 @@ class PathwayPipeline(Pipeline):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation, write_data=write_data)
-        self.pathways_map, self.pathway_descriptions = load_pathways(pathways_fn)
+        self.pathways_map, self.pathway_descriptions = load_pathways(pathways_fn, self.reference)
         self.write_pathway_data = write_data
         self.write_data = False
 
