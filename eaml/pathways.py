@@ -20,7 +20,7 @@ class PathwayPipeline(Pipeline):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation, write_data=write_data)
-        self.pathways_map = load_pathways(pathways_fn)
+        self.pathways_map, self.pathway_descriptions = load_pathways(pathways_fn)
         self.write_pathway_data = write_data
         self.write_data = False
 
@@ -82,6 +82,7 @@ class PathwayPipeline(Pipeline):
         mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
         self.full_results = mcc_df
         self.nonzero_results = compute_stats(self.full_results)
+        self.nonzero_results['description'] = self.pathway_descriptions
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def visualize(self):
@@ -107,14 +108,13 @@ def load_pathways(pathways_fn):
 
     Returns:
         dict(list): Mapping of gene lists to pathways
-
-    TODO: does this need pathway/community size filter?
     """
-    pathway_map = {}
+    pathway_map, pathway_descriptions = {}, {}
     with open(pathways_fn) as f:
         for ln in f:
             ln = ln.strip().split('\t')
             pathway = ln[0]
-            genes = ln[1].split(',')
+            genes = ln[2].split(',')
+            pathway_descriptions[pathway] = ln[1]
             pathway_map[pathway] = genes
-    return pathway_map
+    return pathway_map, pathway_descriptions

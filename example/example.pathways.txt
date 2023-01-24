@@ -1,3 +1,3 @@
-path1	APOE,APOC1
-path2	APOE
-path3	APOC1
+path1	pathway 1	APOE,APOC1
+path2	pathway 2	APOE
+path3	pathway 3	APOC1
