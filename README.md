@@ -57,8 +57,9 @@ EAML can be run by calling `eaml` and one of its commands:
 
 | command     | description                                                                           |
 |-------------|---------------------------------------------------------------------------------------|
-| run         | run the EAML analysis                                                                |
+| run         | run the EAML analysis                                                                 |
 | downsample  | run power analysis by repeatedly sampling cohort and calculating overlap significance |
+| pathways    | run EAML analysis on aggregate pathways/communities                                   |
 
 ### Main Pipeline
 
@@ -81,12 +82,11 @@ Optional arguments:
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
-| -X, --include-X      |           | includes X chromosome in analysis                                                   |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
 | -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
 | -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
 | --cpus               | \<int\>   | number of CPUs to use                                                               |
-| --write-data         |           | keeps design matrix after analysis completes                                        |
-| --dpi                | \<int\>   | DPI for output figures                                                              |
+| --write-data         | \<bool\>  | keeps design matrix after analysis completes                                        |
 | --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 
 
@@ -129,12 +129,10 @@ Optional arguments:
 | --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
 | --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
 | --af-field           | \<str\>   | field with AF information                                                           |
-| -X, --include-X      |           | includes X chromosome in analysis                                                   |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
 | -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
 | -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
 | --cpus               | \<int\>   | number of CPUs to use                                                               |
-| --write-data         |           | keeps design matrix after analysis completes                                        |
-| --dpi                | \<int\>   | DPI for output figures                                                              |
 | --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 | --nrepeats           | \<int\>   | number of replicates for each sample size                                           |
 
@@ -143,6 +141,38 @@ Optional arguments:
 eaml downsample VCF.gz SamplePhenotypes.csv ./meanMCC-results.csv 250 500 1000 --experiment_dir ./ --reference GRCh38 \
 --anotation VEP --weka-path ~/weka/ --seed 1 --cpus 10 --nrepeats 1000
 ```
+
+### Pathway Analysis
+
+This takes the standard EAML approach and applies it to pathways/communities. Instead of testing individual genes, pEA
+is calculated at an aggregate level given by sets of genes mapped to functional groups.
+
+Required arguments:
+
+| argument        | type          | description                                                               |
+|-----------------|---------------|---------------------------------------------------------------------------|
+| data            | \<file\>      | VCF or directory of precomputed design matrices                           |
+| targets         | \<file\>      | two-column CSV with sample IDs and disease status                         |
+| pathways_file   | \<file\>      | Tab-separated file with functional groups and corresponding list of genes |
+| -w, --weka-path | \<str\>       | location of Weka installation                                             |
+
+Optional arguments:
+
+| argument             | type      | description                                                                         |
+|----------------------|-----------|-------------------------------------------------------------------------------------|
+| -e, --experiment_dir | \<str\>   | experiment directory                                                                |
+| -r, --reference      | \<str\>   | genome reference version or file (hg19, hg38, GRCh37, GRCh38)                       |
+| -a, --annotation     | \<str\>   | Variant annotation pipeline used (ANNOVAR, VEP)                                     |
+| --parse-EA           | \<str\>   | how to parse EA scores from different transcripts (max, mean, all, canonical)       |
+| --min-af             | \<float\> | sets minimum allele frequency threshold                                             |
+| --max-af             | \<float\> | sets maximum allele frequency threshold                                             |
+| --af-field           | \<str\>   | field with AF information                                                           |
+| -X, --include-X      | \<bool\>  | includes X chromosome in analysis                                                   |
+| -k, --kfolds         | \<int\>   | number of cross-validation folds                                                    |
+| -s, --seed           | \<int\>   | random seed for cross-validation                                                    |
+| --cpus               | \<int\>   | number of CPUs to use                                                               |
+| --write-data         | \<bool\>  | keeps design matrix after analysis completes                                        |
+| --memory             | \<str\>   | memory argument for Weka JVM                                                        |
 
 ## Input Requirements
 
