@@ -99,12 +99,13 @@ class PathwayPipeline(Pipeline):
 
 
 # util functions
-def load_pathways(pathways_fn):
+def load_pathways(pathways_fn, reference_df):
     """
-    Loads map of gene lists to pathways
+    Loads map of gene lists to pathways and intersects with reference genes
 
     Args:
         pathways_fn (str/Path): File with two columns of pathways and gene lists
+        reference_df (DataFrame): Reference of all coding genes and positions
 
     Returns:
         dict(list): Mapping of gene lists to pathways
@@ -114,7 +115,7 @@ def load_pathways(pathways_fn):
         for ln in f:
             ln = ln.strip().split('\t')
             pathway = ln[0]
-            genes = ln[2].split(',')
+            genes = set(ln[2].split(',')).intersection(reference_df.index)
             pathway_descriptions[pathway] = ln[1]
             pathway_map[pathway] = genes
     return pathway_map, pathway_descriptions
