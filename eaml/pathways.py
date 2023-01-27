@@ -83,7 +83,8 @@ class PathwayPipeline(Pipeline):
         self.full_results = mcc_df
         self.nonzero_results = compute_stats(self.full_results)
         self.nonzero_results['description'] = self.pathway_descriptions
-        self.nonzero_results['genes'] = {','.join(self.pathways_map[pathway]) for pathway in self.pathways_map.keys()}
+        self.nonzero_results['genes'] = {pathway: ','.join(gene_list) for pathway, gene_list
+                                         in self.pathways_map.items() if pathway in self.nonzero_results.index}
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def visualize(self):
