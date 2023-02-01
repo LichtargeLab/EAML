@@ -26,7 +26,7 @@ def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_
     Returns:
         DataFrame: pEA design matrix
     """
-    feature_names = ('D0', 'D30', 'D70', 'R0', 'R30', 'R70')
+    feature_names = ['D0', 'D30', 'D70', 'R0', 'R30', 'R70']
     ft_cutoffs = list(product((1, 2), (0, 30, 70)))
     vcf = VariantFile(vcf_fn)
     vcf.subset_samples(samples)

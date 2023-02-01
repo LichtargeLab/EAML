@@ -127,9 +127,7 @@ class Pipeline:
             for clf, mcc in mcc_results.items():
                 mcc_df_dict[clf].append(mcc)
         mcc_df = pd.DataFrame(mcc_df_dict).set_index('gene')
-        clfs = mcc_df.columns
         mcc_df['mean'] = mcc_df.mean(axis=1)
-        mcc_df['std'] = mcc_df[clfs].std(axis=1)
         mcc_df.sort_values('mean', ascending=False, inplace=True)
         mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
         self.full_results = mcc_df

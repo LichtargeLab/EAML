@@ -50,7 +50,7 @@ class PathwayPipeline(Pipeline):
         Returns:
             DataFrame: EA design matrix for pathway-of-interest
         """
-        feature_names = ('D0', 'D30', 'D70', 'R0', 'R30', 'R70')
+        feature_names = ['D0', 'D30', 'D70', 'R0', 'R30', 'R70']
         dmatrix = pd.DataFrame(np.ones((len(self.targets), 6)), index=self.targets.index, columns=feature_names)
         gene_list = self.pathways_map[pathway]
 
@@ -75,14 +75,14 @@ class PathwayPipeline(Pipeline):
             for clf, mcc in mcc_results.items():
                 mcc_df_dict[clf].append(mcc)
         mcc_df = pd.DataFrame(mcc_df_dict).set_index('pathway')
-        clfs = mcc_df.columns
         mcc_df['mean'] = mcc_df.mean(axis=1)
-        mcc_df['std'] = mcc_df[clfs].std(axis=1)
         mcc_df.sort_values('mean', ascending=False, inplace=True)
         mcc_df.to_csv(self.expdir / 'classifier-MCC-summary.csv')
         self.full_results = mcc_df
         self.nonzero_results = compute_stats(self.full_results)
         self.nonzero_results['description'] = self.pathway_descriptions
+        self.nonzero_results['n_genes'] = {pathway: len(gene_list) for pathway, gene_list in self.pathways_map.items()
+                                           if pathway in self.nonzero_results.index}
         self.nonzero_results['genes'] = {pathway: ','.join(gene_list) for pathway, gene_list
                                          in self.pathways_map.items() if pathway in self.nonzero_results.index}
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
