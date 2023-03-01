@@ -16,18 +16,20 @@ from .visualize import mcc_hist, mcc_scatter
 class PathwayPipeline(Pipeline):
     def __init__(self, expdir, data_fn, targets_fn, pathways_fn, reference='hg19', cpus=1, kfolds=10, seed=111,
                  weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
+                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR', gene_results=None):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation, write_data=write_data)
         self.pathways_map, self.pathway_descriptions = load_pathways(pathways_fn, self.reference)
         self.write_pathway_data = write_data
         self.write_data = False
+        self.gene_results = pd.read_csv(gene_results, index_col='gene')
 
     def run(self):
         """Run full pipeline from start to finish"""
         start = time.time()
         (self.expdir / 'tmp').mkdir(exist_ok=True)
+        self.filter_eaml()
         results = Parallel(n_jobs=self.cpus)(
             delayed(self.eval_feature)(pathway) for pathway in tqdm(list(self.pathways_map.keys()))
         )
@@ -39,6 +41,11 @@ class PathwayPipeline(Pipeline):
         end = time.time()
         elapsed = str(datetime.timedelta(seconds=end - start))
         print(f'Time elapsed: {elapsed}')
+
+    def filter_eaml(self):
+        sig_genes = set(self.gene_results.loc[self.gene_results['qvalue'] < 0.1].index)
+        for pathway in list(self.pathways_map.keys()):
+            self.pathways_map[pathway] = self.pathways_map[pathway] - sig_genes
 
     def compute_pathway_dmatrix(self, pathway):
         """

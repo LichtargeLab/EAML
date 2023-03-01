@@ -51,7 +51,7 @@ def main():
     info = 'evaluate statistical power by repeat stratified downsampling of cohort'
     sub = subs.add_parser('downsample', help=info)
     main_args(sub)
-    sub.add_argument('true_results', type=Path, help='True MCC-ranked results from standard EAML experiment')
+    sub.add_argument('true_results', type=Path, help='true MCC-ranked results from standard EAML experiment')
     sub.add_argument('--sample-sizes', type=int, nargs='+', help='sample sizes to test')
     sub.add_argument('--nrepeats', type=int, default=10, help='number of replicates per sample size')
 
@@ -59,8 +59,9 @@ def main():
     info = 'run EAML analysis on defined pathways/communities'
     sub = subs.add_parser('pathways', help=info)
     main_args(sub)
-    sub.add_argument('pathways_file', type=Path, help='Tab-separated file with pathways/communities and corresponding'
+    sub.add_argument('pathways_file', type=Path, help='tab-separated file with pathways/communities and corresponding'
                                                       'comma-separated lists of genes')
+    sub.add_argument('--gene-results', type=Path, help='results CSV from base EAML for filtering significant single genes')
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
 
     # Parse arguments
