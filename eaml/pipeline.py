@@ -167,7 +167,7 @@ def compute_stats(full_results):
         DataFrame: EAML results with non-zero MCCs and corresponding z-scores, p-values, and adjusted p-values
     """
     mcc_df = full_results[['mean']]
-    nonzero = mcc_df.loc[mcc_df[f'mean'] != 0].copy()
+    nonzero = mcc_df.loc[mcc_df['mean'] != 0].copy()
     nonzero.rename(columns={'mean': 'MCC'}, inplace=True)
     nonzero['logMCC'] = np.log(nonzero.MCC + 1 - np.min(nonzero.MCC))
     nonzero['zscore'] = (nonzero.logMCC - np.mean(nonzero.logMCC)) / np.std(nonzero.logMCC)

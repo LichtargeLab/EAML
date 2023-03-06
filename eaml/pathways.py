@@ -44,6 +44,7 @@ class PathwayPipeline(Pipeline):
 
     def filter_eaml(self):
         sig_genes = set(self.gene_results.loc[self.gene_results['qvalue'] < 0.1].index)
+        print(f'Removing EAML-significant genes: {sig_genes}')
         for pathway in list(self.pathways_map.keys()):
             self.pathways_map[pathway] = self.pathways_map[pathway] - sig_genes
 
@@ -90,7 +91,7 @@ class PathwayPipeline(Pipeline):
         self.nonzero_results['description'] = self.pathway_descriptions
         self.nonzero_results['n_genes'] = {pathway: len(gene_list) for pathway, gene_list in self.pathways_map.items()
                                            if pathway in self.nonzero_results.index}
-        self.nonzero_results['genes'] = {pathway: ','.join(gene_list) for pathway, gene_list
+        self.nonzero_results['genes'] = {pathway: ';'.join(gene_list) for pathway, gene_list
                                          in self.pathways_map.items() if pathway in self.nonzero_results.index}
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
