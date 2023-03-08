@@ -14,9 +14,9 @@ from .visualize import mcc_hist, mcc_scatter
 
 
 class PathwayPipeline(Pipeline):
-    def __init__(self, expdir, data_fn, targets_fn, pathways_fn, reference='hg19', cpus=1, kfolds=10, seed=111,
-                 weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False,
-                 parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR', gene_results=None):
+    def __init__(self, expdir, data_fn, targets_fn, pathways_fn, gene_results, reference='hg19', cpus=1, kfolds=10,
+                 seed=111, weka_path='~/weka', min_af=None, max_af=None, af_field='AF', include_X=False,
+                 write_data=False, parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation, write_data=write_data)
@@ -45,8 +45,11 @@ class PathwayPipeline(Pipeline):
     def filter_eaml(self):
         sig_genes = set(self.gene_results.loc[self.gene_results['qvalue'] < 0.1].index)
         print(f'Removing EAML-significant genes: {sig_genes}')
+        self.filtered_map = {}
+        self.core_genes = {}
         for pathway in list(self.pathways_map.keys()):
-            self.pathways_map[pathway] = self.pathways_map[pathway] - sig_genes
+            self.filtered_map[pathway] = self.pathways_map[pathway] - sig_genes
+            self.core_genes[pathway] = self.pathways_map[pathway] & sig_genes
 
     def compute_pathway_dmatrix(self, pathway):
         """
@@ -60,7 +63,7 @@ class PathwayPipeline(Pipeline):
         """
         feature_names = ['D0', 'D30', 'D70', 'R0', 'R30', 'R70']
         dmatrix = pd.DataFrame(np.ones((len(self.targets), 6)), index=self.targets.index, columns=feature_names)
-        gene_list = self.pathways_map[pathway]
+        gene_list = self.filtered_map[pathway]
 
         for gene in gene_list:
             # need to resubtract sub-matrix since it's subtracted in parser
@@ -89,10 +92,12 @@ class PathwayPipeline(Pipeline):
         self.full_results = mcc_df
         self.nonzero_results = compute_stats(self.full_results)
         self.nonzero_results['description'] = self.pathway_descriptions
-        self.nonzero_results['n_genes'] = {pathway: len(gene_list) for pathway, gene_list in self.pathways_map.items()
+        self.nonzero_results['core_genes'] = {pathway: ';'.join(gene_list) for pathway, gene_list
+                                              in self.core_genes.items() if pathway in self.nonzero_results.index}
+        self.nonzero_results['n_genes'] = {pathway: len(gene_list) for pathway, gene_list in self.filtered_map.items()
                                            if pathway in self.nonzero_results.index}
         self.nonzero_results['genes'] = {pathway: ';'.join(gene_list) for pathway, gene_list
-                                         in self.pathways_map.items() if pathway in self.nonzero_results.index}
+                                         in self.filtered_map.items() if pathway in self.nonzero_results.index}
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def visualize(self):

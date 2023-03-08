@@ -149,12 +149,13 @@ is calculated at an aggregate level given by sets of genes mapped to functional 
 
 Required arguments:
 
-| argument        | type          | description                                                               |
-|-----------------|---------------|---------------------------------------------------------------------------|
-| data            | \<file\>      | VCF or directory of precomputed design matrices                           |
-| targets         | \<file\>      | two-column CSV with sample IDs and disease status                         |
-| pathways_file   | \<file\>      | Tab-separated file with functional groups and corresponding list of genes |
-| -w, --weka-path | \<str\>       | location of Weka installation                                             |
+| argument        | type          | description                                                                               |
+|-----------------|---------------|-------------------------------------------------------------------------------------------|
+| data            | \<file\>      | VCF or directory of precomputed design matrices                                           |
+| targets         | \<file\>      | two-column CSV with sample IDs and disease status                                         |
+| pathways_file   | \<file\>      | Tab-separated file with functional groups and corresponding list of genes                 |
+| gene_results    | \<file\>      | CSV of results from base EAML for filtering out genes that would dominate pathway signals |
+| -w, --weka-path | \<str\>       | location of Weka installation                                                             |
 
 Optional arguments:
 

@@ -61,7 +61,8 @@ def main():
     main_args(sub)
     sub.add_argument('pathways_file', type=Path, help='tab-separated file with pathways/communities and corresponding'
                                                       'comma-separated lists of genes')
-    sub.add_argument('--gene-results', type=Path, help='results CSV from base EAML for filtering significant single genes')
+    sub.add_argument('gene-results', type=Path,
+                     help='results CSV from base EAML for filtering significant single genes')
     sub.add_argument('--write-data', action='store_true', help='keep design matrix after analysis')
 
     # Parse arguments
@@ -89,7 +90,7 @@ def run_program(parser, namespace):
         pipeline = DownsamplingPipeline(*args, **kwargs)
         pipeline.run()
     elif command == 'pathways':
-        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'pathways_file')]
+        args = [kwargs.pop(arg) for arg in ('experiment_dir', 'data', 'targets', 'pathways_file', 'gene_results')]
         pipeline = PathwayPipeline(*args, **kwargs)
         pipeline.run()
     else:
