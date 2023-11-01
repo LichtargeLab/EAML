@@ -1,7 +1,7 @@
 """Package for EAML"""
 
 __project__ = 'EAML'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 CLI = 'eaml'
 VERSION = f'{__project__} v{__version__}'

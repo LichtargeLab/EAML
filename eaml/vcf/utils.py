@@ -3,8 +3,7 @@ import numpy as np
 
 
 def validate_EA(ea):
-    """
-    Checks for valid EA score
+    """Checks for valid EA score
 
     Args:
         ea (str/float/None): EA score as string
@@ -30,8 +29,7 @@ def pEA(dmatrix, ea, gts, cutoff, ft_name):
 
 
 def af_check(rec, af_field='AF', max_af=None, min_af=None):
-    """
-    Check if variant allele frequency passes filters
+    """Check if variant allele frequency passes filters
 
     Args:
         rec (VariantRecord)
@@ -55,8 +53,7 @@ def af_check(rec, af_field='AF', max_af=None, min_af=None):
 
 
 def convert_zygo(genotype):
-    """
-    Convert a genotype tuple to a zygosity integer
+    """Convert a genotype tuple to a zygosity integer
 
     Args:
         genotype (tuple): The genotype of a variant for a sample

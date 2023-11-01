@@ -61,13 +61,12 @@ def main():
 
 
 def run_program(parser, namespace):
-    """
-    Call specified module of pipeline
+    """Call specified module of pipeline
 
     Args:
         parser (ArgumentParser): The command-line parser
         namespace (Namespace): The parsed argument namespace
-"""
+    """
     kwargs = vars(namespace)
     command = kwargs.pop('command')
     if command == 'run':

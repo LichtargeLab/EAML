@@ -19,7 +19,31 @@ from .weka import eval_gene
 
 
 class Pipeline:
-    # TODO: add Pipeline docstrings
+    """The main pipeline object, which stores all input and output data and runs analysis methods.
+
+    Standard use is to instantiate the Pipeline object, then call `Pipeline.run()`, which runs the entire EAML pipeline
+    from start to finish. Example files are in the 'examples' directory.
+
+    Args:
+        expdir (Path-like): Filepath to experiment directory
+        data_fn (Path-like): Filepath to input VCF or pre-computed design matrix
+        targets_fn (Path-like): Filepath to two-column CSV with sample IDs and disease status
+        reference (str/Path-like): Genome reference version or custom file (hg19, hg38, GRCh37, GRCh38)
+        cpus (int): Number of CPUs to use
+        kfolds (int): Number of cross-validation folds for each classifier
+        seed (int): Random seed for cross-validation
+        weka_path (Path-like): Filepath to Weka installation
+        min_af (float): Sets minimum allele frequency threshold for including variants
+        max_af (float): Sets maximum allele frequency threshold for including variants
+        af_field (str): VCF field with allele frequency
+        include_X (bool): Includes X chromosome in analysis
+        write_data (bool): Keeps design matrix after completed analysis
+        parse_EA (str): How to parse EA scores when there are multiple transcripts (max, mean, all, canonical).
+            Default is to only use the predefined 'canonical' transcript.
+        memory (str): Memory argument for JVM used by Weka
+        annotation (str): Variant annotation software used (ANNOVAR, VEP)
+    """
+    # hyperparameters for Weka classifiers
     class_params = {
         'PART': '-M 5 -C 0.25 -Q 1',
         'JRip': '-F 3 -N 2.0 -O 2 -S 1 -P',
@@ -35,6 +59,7 @@ class Pipeline:
     def __init__(self, expdir, data_fn, targets_fn, reference='hg19', cpus=1, kfolds=10, seed=111, weka_path='~/weka',
                  min_af=None, max_af=None, af_field='AF', include_X=False, write_data=False, parse_EA='canonical',
                  memory='Xmx2g', annotation='ANNOVAR'):
+        """Initializes Pipeline from input data"""
         # data arguments
         self.expdir = expdir.expanduser().resolve()
         self.data_fn = data_fn.expanduser().resolve()
@@ -71,8 +96,7 @@ class Pipeline:
         print(f'Time elapsed: {elapsed}')
 
     def compute_gene_dmatrix(self, gene):
-        """
-        Computes the full design matrix from an input VCF
+        """Computes the full design matrix from an input VCF
 
         Args:
             gene (str): HGSC gene symbol
@@ -94,8 +118,7 @@ class Pipeline:
         return dmatrix
 
     def eval_gene(self, gene):
-        """
-        Parses input data for a given gene and evaluates it using Weka
+        """Parses input data for a given gene and evaluates it using Weka
 
         Args:
             gene (str): HGSC gene symbol
@@ -133,8 +156,7 @@ class Pipeline:
         self.nonzero_results.to_csv(self.expdir / 'meanMCC-results.nonzero-stats.csv')
 
     def visualize(self):
-        """
-        Generate summary figures of EAML results, including a Manhattan plot of p-values and scatterplots and
+        """Generate summary figures of EAML results, including a Manhattan plot of p-values and scatterplots and
         histograms of MCC scores
         """
         default_fig_params = {'figure.figsize': (8, 6)}
@@ -155,8 +177,7 @@ class Pipeline:
 
 
 def compute_stats(full_results):
-    """
-    Generate z-score and p-value statistics for all non-zero MCC scored genes
+    """Generate z-score and p-value statistics for all non-zero MCC scored genes
 
     Args:
         full_results (DataFrame): DataFrame with all classifier scores and ensemble average, for each gene
@@ -175,8 +196,7 @@ def compute_stats(full_results):
 
 
 def load_reference(reference, include_X=False):
-    """
-    Loads reference file of gene positions
+    """Loads reference file of gene positions
 
     Args:
         reference (str): Either human genome reference name (hg19 or hg38), or filepath to custom reference

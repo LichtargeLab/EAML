@@ -10,8 +10,7 @@ from .utils import pEA, af_check, convert_zygo, validate_EA
 
 
 def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
-    """
-    Parse EA scores and compute pEA design matrix for a given gene with custom ANNOVAR annotations
+    """Parse EA scores and compute pEA design matrix for a given gene with custom ANNOVAR annotations
 
     Args:
         vcf_fn (Path-like): Filepath to VCF
@@ -50,8 +49,7 @@ def parse_ANNOVAR(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_
 
 # util functions
 def fetch_variants(vcf, contig=None, start=None, stop=None):
-    """
-    Variant iterator
+    """Iterates over variant records for a given region, splitting up records that are annotated with multiple genes.
 
     Args:
         vcf (VariantFile): pysam VariantFile
@@ -71,8 +69,7 @@ def fetch_variants(vcf, contig=None, start=None, stop=None):
 
 
 def split_genes(rec):
-    """
-    If a variant has overlapping gene annotations, it will be split into separate records with correct corresponding
+    """If a variant has overlapping gene annotations, it will be split into separate records with correct corresponding
     transcripts, substitutions, and EA scores
 
     Args:
@@ -107,19 +104,19 @@ def split_genes(rec):
 
 
 def fetch_EA(EA, nm_ids, canon_nm, EA_parser='canonical'):
-    """
-    Parse EA scores for a given variant
+    """Parse EA scores for a given variant
 
     Args:
         EA (tuple): The EA scores parsed from a variant
         nm_ids (tuple): Transcript IDs corresponding to EA scores
         canon_nm (str): Canonical NM ID based on smallest numbered transcript
-        EA_parser (str): How to aggregate multiple transcript scores
+        EA_parser (str): How to aggregate multiple transcript EA scores
 
     Returns:
         float/list: Valid EA scores, refactored as floats
 
-    Note: EA must be string type
+    Note: EA must be string type, since our ANNOVAR annotations don't have a separate field with nonsense and fs-indel
+        annotations.
     """
     if EA_parser == 'canonical' and canon_nm in nm_ids:
         if len(EA) > 1:

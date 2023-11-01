@@ -10,6 +10,18 @@ from .utils import validate_EA, af_check, convert_zygo, pEA
 
 
 def fetch_EA(EA, canon_ensp, all_ensp, csq, EA_parser='canonical'):
+    """Parse EA scores for a given variant
+
+    Args:
+        EA (tuple): The EA scores parsed from a variant
+        canon_ensp (str): Canonical ENSP ID based on VEP criteria
+        all_ensp (tuple): All ENSP transcript IDs corresponding to the EA scores
+        csq (str): The functional consequence of the variant
+        EA_parser (str): How to aggregate multiple transcript EA scores
+
+    Returns:
+        float/list: Valid EA scores, refactored as floats
+    """
     if 'stop_gained' in csq or 'frameshift_variant' in csq or 'stop_lost' in csq:
         return 100
     if EA_parser == 'canonical':
@@ -34,6 +46,21 @@ def fetch_EA(EA, canon_ensp, all_ensp, csq, EA_parser='canonical'):
 
 
 def parse_VEP(vcf_fn, gene, gene_ref, samples, min_af=None, max_af=None, af_field='AF', EA_parser='canonical'):
+    """Parse EA scores and compute pEA design matrix for a given gene with custom ENSEMBL-VEP annotations
+
+    Args:
+        vcf_fn (Path-like): Filepath to VCF
+        gene (str): HGSC gene symbol
+        gene_ref (Series): Reference information for given gene's transcripts
+        samples (list): sample IDs
+        min_af (float): Minimum allele frequency for variants
+        max_af (float): Maximum allele frequency for variants
+        af_field (str): Name of INFO field containing allele frequency information
+        EA_parser (str): How to parse EA scores from multiple transcripts
+
+    Returns:
+        DataFrame: pEA design matrix
+    """
     feature_names = ('D0', 'D30', 'D70', 'R0', 'R30', 'R70')
     ft_cutoffs = list(product((1, 2), (0, 30, 70)))
     vcf = VariantFile(vcf_fn)

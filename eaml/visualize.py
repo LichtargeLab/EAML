@@ -11,8 +11,7 @@ plt.rcParams['pdf.fonttype'] = 42  # so text is exported correctly to Illustrato
 
 
 def mcc_scatter(results, column='MCC', fig_params=None):
-    """
-    Scatterplot of maxMCC results
+    """Scatterplot of maxMCC results
 
     Args:
         results (DataFrame): Scored results from EAML
@@ -35,8 +34,7 @@ def mcc_scatter(results, column='MCC', fig_params=None):
 
 
 def mcc_hist(results, column='MCC', fig_params=None):
-    """
-    Histogram of MCC scores
+    """Histogram of MCC scores
 
     Args:
         results (DataFrame): Scored results from EAML
@@ -76,8 +74,7 @@ def downsample_enrichment_plot(hypergeom_df, fig_params=None):
 
 
 def manhattan_plot(mcc_df, reference, fig_params=None):
-    """
-    Generates a Manhattan plot, given DataFrames of MCC rankings and gene positions
+    """Generates a Manhattan plot, given DataFrames of MCC rankings and gene positions
 
     Args:
         mcc_df (pd.DataFrame): Scored results from EAML, must have column corresponding to p-value, indexed by gene

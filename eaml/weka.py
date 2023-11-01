@@ -4,8 +4,7 @@ from subprocess import run, DEVNULL, PIPE
 
 
 def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111, memory='Xmx2g'):
-    """
-    Wrapper that calls Weka JVM as subprocess
+    """Wrapper that calls Weka JVM as subprocess
 
     Args:
         clf (str): Name of classifier class in Weka
@@ -26,8 +25,7 @@ def call_weka(clf, clf_params, arff_fn, weka_path='~/weka', cv=10, seed=111, mem
 
 
 def parse_weka_output(stdout):
-    """
-    Parse string stdout from single classifier's cross-validation
+    """Parse string stdout from single classifier's cross-validation
 
     Args:
         stdout (str): Stdout from Weka subprocess
@@ -51,8 +49,7 @@ def parse_weka_output(stdout):
 
 
 def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.'), weka_path='~/weka', memory='Xmx2g'):
-    """
-    Evaluate gene's classification performance across all Pipeline classifiers
+    """Evaluate gene's classification performance across all Pipeline classifiers
 
     Args:
         gene (str): HGSC gene symbol
@@ -79,8 +76,7 @@ def eval_gene(gene, dmatrix, targets, clf_calls, seed=111, cv=10, expdir=Path('.
 
 
 def write_arff(design_matrix, targets, f_out):
-    """
-    Output a .arff file corresponding to given gene's design matrix
+    """Output a .arff file corresponding to given gene's design matrix
 
     Args:
         design_matrix (DataFrame): EA design matrix
