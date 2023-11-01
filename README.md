@@ -57,7 +57,7 @@ EAML can be run by calling `eaml` and one of its commands:
 
 | command     | description                                                                           |
 |-------------|---------------------------------------------------------------------------------------|
-| run         | run the EAML analysis                                                                |
+| run         | run the EAML analysis                                                                 |
 | downsample  | run power analysis by repeatedly sampling cohort and calculating overlap significance |
 
 ### Main Pipeline

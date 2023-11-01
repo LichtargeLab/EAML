@@ -1,3 +1,6 @@
+# 1.3.1 (2023-11-01)
+- Filled in missing docstrings
+
 # 1.3.0 (2023-01-11)
 
 - Renamed project and all instances of "EA-ML" and "ea_ml" to "EAML" to be inline with publications

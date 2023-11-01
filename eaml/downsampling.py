@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Module for running downsampling experiments to estimate statistical power in comparison to alternative association
+"""Module for running downsampling experiments to estimate statistical power in comparison to alternative association
 methods.
 
 Note: This can be a long-running process, depending on the dataset size.
@@ -18,9 +17,35 @@ from .weka import eval_gene
 
 
 class DownsamplingPipeline(Pipeline):
+    """The main pipeline object for downsampling.
+
+    Inherits from `Pipeline` class.
+
+    Args:
+        expdir (Path-like): Filepath to experiment directory
+        data_fn (Path-like): Filepath to input VCF or pre-computed design matrix
+        targets_fn (Path-like): Filepath to two-column CSV with sample IDs and disease status
+        true_results_fn (Path-like): Filepath to final results CSV from full cohort experiment
+        sample_sizes (list[int]): Sample sizes to test
+        nrepeats (int): Number of replicates to perform for each sample size (more = longer compute time)
+        reference (str/Path-like): Genome reference version or custom file (hg19, hg38, GRCh37, GRCh38)
+        cpus (int): Number of CPUs to use
+        kfolds (int): Number of cross-validation folds for each classifier
+        seed (int): Random seed for cross-validation
+        weka_path (Path-like): Filepath to Weka installation
+        min_af (float): Sets minimum allele frequency threshold for including variants
+        max_af (float): Sets maximum allele frequency threshold for including variants
+        af_field (str): VCF field with allele frequency
+        include_X (bool): Includes X chromosome in analysis
+        parse_EA (str): How to parse EA scores when there are multiple transcripts (max, mean, all, canonical).
+            Default is to only use the predefined 'canonical' transcript.
+        memory (str): Memory argument for JVM used by Weka
+        annotation (str): Variant annotation software used (ANNOVAR, VEP)
+    """
     def __init__(self, expdir, data_fn, targets_fn, true_results_fn, sample_sizes, nrepeats=10, reference='hg19',
                  cpus=1, kfolds=10, seed=111, weka_path='~/weka', min_af=None, max_af=None, af_field='AF',
                  include_X=False, parse_EA='canonical', memory='Xmx2g', annotation='ANNOVAR'):
+        """Initializes DownsamplingPipeline from input data"""
         super().__init__(expdir, data_fn, targets_fn, reference=reference, cpus=cpus, kfolds=kfolds, seed=seed,
                          weka_path=weka_path, min_af=min_af, max_af=max_af, af_field=af_field, include_X=include_X,
                          parse_EA=parse_EA, memory=memory, annotation=annotation)
@@ -76,8 +101,7 @@ class DownsamplingPipeline(Pipeline):
         self.hypergeometric_results.to_csv(self.expdir / 'hypergeometric_results.csv')
 
     def hypergeometric_overlap(self):
-        """
-        Calculates hypergeometric overlap with true results at each sample size.
+        """Calculates hypergeometric overlap with true results at each sample size.
 
         For each sample size, we calculate the average number of genes identified across replicates and the average
         overlap between each replicate and the true results. These are then compared to number of genes identified in
